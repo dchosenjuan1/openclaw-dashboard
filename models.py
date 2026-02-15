@@ -27,7 +27,7 @@ class User(db.Model):
     # Stripe integration
     stripe_customer_id = db.Column(db.String(255), unique=True, index=True)
 
-    # Subscription tier: 'free', 'starter', 'pro', 'team'
+    # Subscription tier: 'free', 'pro' (legacy: 'starter', 'team' mapped via effective_tier)
     subscription_tier = db.Column(db.String(50), default='free', index=True)
     subscription_status = db.Column(db.String(50), default='inactive')  # 'active', 'inactive', 'cancelled', 'past_due'
     stripe_subscription_id = db.Column(db.String(255), unique=True, index=True)
@@ -74,6 +74,14 @@ class User(db.Model):
         )
         db.session.add(transaction)
 
+    @property
+    def effective_tier(self):
+        """Map legacy tiers to the simplified 2-tier model (free/pro).
+        Existing 'starter' and 'team' users are treated as 'pro'."""
+        if self.subscription_tier in ('starter', 'team'):
+            return 'pro'
+        return self.subscription_tier
+
     def has_active_subscription(self):
         """Check if user has an active subscription"""
         if self.subscription_status != 'active':
@@ -83,56 +91,52 @@ class User(db.Model):
         return True
 
     def is_premium(self):
-        """Check if user has premium features (any paid tier)"""
-        return self.has_active_subscription() and self.subscription_tier in ['starter', 'pro', 'team']
+        """Check if user has premium features (Pro tier)"""
+        return self.has_active_subscription() and self.effective_tier == 'pro'
 
     def has_unlimited_posts(self):
         """Check if user has unlimited posting (no rate limit)"""
-        # Admins always have unlimited posts for testing/emergency situations
         if self.is_admin:
             return True
-        return self.is_premium() and self.subscription_tier in ['pro', 'team']
+        return self.is_premium()
 
     def get_max_agents(self):
         """Get max number of agents user can have"""
-        if self.subscription_tier == 'team':
+        if self.is_admin:
             return 999  # Unlimited
-        elif self.subscription_tier == 'pro':
-            return 5
-        elif self.subscription_tier == 'starter':
-            return 3
+        if self.effective_tier == 'pro' and self.has_active_subscription():
+            return 999  # Unlimited
         return 1  # Free tier
 
-    # Phase 1: Feed + Analytics Access Methods
     def can_access_feed(self):
-        """Check if user can access Moltbook feed (Starter+)"""
+        """Check if user can access Moltbook feed (Pro)"""
         if self.is_admin:
             return True
-        return self.is_premium() and self.subscription_tier in ['starter', 'pro', 'team']
+        return self.is_premium()
 
     def can_upvote(self):
-        """Check if user can upvote posts (Starter+)"""
+        """Check if user can upvote posts (Pro)"""
         if self.is_admin:
             return True
-        return self.is_premium() and self.subscription_tier in ['starter', 'pro', 'team']
+        return self.is_premium()
 
     def can_view_profiles(self):
-        """Check if user can view other agent profiles (Starter+)"""
+        """Check if user can view other agent profiles (Pro)"""
         if self.is_admin:
             return True
-        return self.is_premium() and self.subscription_tier in ['starter', 'pro', 'team']
+        return self.is_premium()
 
     def can_access_analytics(self):
-        """Check if user can access analytics dashboard (Starter+)"""
+        """Check if user can access analytics dashboard (Pro)"""
         if self.is_admin:
             return True
-        return self.is_premium() and self.subscription_tier in ['starter', 'pro', 'team']
+        return self.is_premium()
 
     def can_access_personal_feed(self):
-        """Check if user can access personalized feed (Pro+)"""
+        """Check if user can access personalized feed (Pro)"""
         if self.is_admin:
             return True
-        return self.is_premium() and self.subscription_tier in ['pro', 'team']
+        return self.is_premium()
 
     def get_primary_agent(self):
         """Get user's first agent (for API calls)"""
@@ -312,6 +316,9 @@ class Agent(db.Model):
     # Moltbook integration
     moltbook_api_key = db.Column(db.String(255))  # API key for Moltbook access
 
+    # Agent type: 'direct' (default LLM agent), 'websocket', 'http_api'
+    agent_type = db.Column(db.String(50), nullable=False, default='direct')
+
     # Status
     is_active = db.Column(db.Boolean, default=True)
     is_default = db.Column(db.Boolean, default=False)  # User's default agent
@@ -320,6 +327,14 @@ class Agent(db.Model):
     llm_config = db.Column(db.JSON)  # {provider, model, api_key, temperature, etc.}
     identity_config = db.Column(db.JSON)  # {personality, role, behavior, etc.}
     moltbook_config = db.Column(db.JSON)  # {api_key, default_submolt, etc.}
+
+    # External agent fields (only used for websocket/http_api types)
+    connection_url = db.Column(db.String(500))
+    auth_config = db.Column(db.JSON)
+    agent_config = db.Column(db.JSON)
+    is_featured = db.Column(db.Boolean, default=False)
+    last_connected_at = db.Column(db.DateTime)
+    last_error = db.Column(db.Text)
 
     # Usage statistics
     total_posts = db.Column(db.Integer, default=0)
@@ -334,18 +349,28 @@ class Agent(db.Model):
 
     def to_dict(self):
         """Convert agent to dictionary for API responses"""
-        return {
+        d = {
             'id': self.id,
             'name': self.name,
             'description': self.description,
             'avatar_emoji': self.avatar_emoji,
+            'avatar_url': self.avatar_url,
+            'agent_type': self.agent_type,
             'is_active': self.is_active,
             'is_default': self.is_default,
+            'is_featured': self.is_featured,
             'total_posts': self.total_posts,
             'last_post_at': self.last_post_at.isoformat() if self.last_post_at else None,
-            'created_at': self.created_at.isoformat(),
-            'updated_at': self.updated_at.isoformat()
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None,
         }
+        if self.agent_type in ('websocket', 'http_api'):
+            d['connection_url'] = self.connection_url
+            d['auth_config'] = {k: ('***' if k in ('token', 'password') else v) for k, v in (self.auth_config or {}).items()}
+            d['agent_config'] = self.agent_config or {}
+            d['last_connected_at'] = self.last_connected_at.isoformat() if self.last_connected_at else None
+            d['last_error'] = self.last_error
+        return d
 
 
 # ============================================
@@ -516,4 +541,1252 @@ class AgentAction(db.Model):
                 'name': self.agent.name,
                 'avatar_emoji': self.agent.avatar_emoji
             } if self.agent else None
+        }
+
+
+# ============================================
+# AI Workbench Models
+# ============================================
+
+class UserModelConfig(db.Model):
+    """Per-user, per-feature LLM configuration"""
+    __tablename__ = 'user_model_configs'
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    feature_slot = db.Column(db.String(50), nullable=False)  # 'chatbot', 'web_browsing', 'utility', or custom tool name
+
+    # LLM config
+    provider = db.Column(db.String(50), nullable=False)  # 'openai', 'anthropic', 'google', 'groq', etc.
+    model = db.Column(db.String(200), nullable=False)
+    api_key = db.Column(db.Text)  # Encrypted in production
+    endpoint_url = db.Column(db.String(500))  # Custom endpoint URL
+    extra_config = db.Column(db.JSON)  # {temperature, max_tokens, etc.}
+
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    __table_args__ = (db.UniqueConstraint('user_id', 'feature_slot', name='_user_feature_uc'),)
+
+    user = db.relationship('User', backref='model_configs')
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'feature_slot': self.feature_slot,
+            'provider': self.provider,
+            'model': self.model,
+            'has_api_key': bool(self.api_key),
+            'endpoint_url': self.endpoint_url,
+            'extra_config': self.extra_config or {},
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None,
+        }
+
+
+class ChatConversation(db.Model):
+    """Chat conversation groupings"""
+    __tablename__ = 'chat_conversations'
+
+    id = db.Column(db.Integer, primary_key=True)
+    conversation_id = db.Column(db.String(64), unique=True, nullable=False, index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    title = db.Column(db.String(255), default='New Chat')
+
+    # What feature/agent this conversation belongs to
+    feature = db.Column(db.String(50), default='chatbot')  # chatbot, web_browsing, utility, nautilus
+    agent_type = db.Column(db.String(50), default='direct_llm')  # direct_llm, nautilus, external
+    agent_id = db.Column(db.Integer, db.ForeignKey('agents.id'), nullable=True)
+
+    # Channel linking (Telegram, Discord, etc.)
+    channel_platform = db.Column(db.String(50), index=True)  # 'telegram', 'discord', etc.
+    channel_chat_id = db.Column(db.String(255), index=True)  # External chat ID
+    channel_metadata = db.Column(db.JSON)  # Platform-specific data (username, etc.)
+
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    user = db.relationship('User', backref='chat_conversations')
+    messages = db.relationship('ChatMessage', backref='conversation', lazy='dynamic', cascade='all, delete-orphan')
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'conversation_id': self.conversation_id,
+            'title': self.title,
+            'feature': self.feature,
+            'agent_type': self.agent_type,
+            'agent_id': self.agent_id,
+            'channel_platform': self.channel_platform,
+            'channel_chat_id': self.channel_chat_id,
+            'channel_metadata': self.channel_metadata,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None,
+            'message_count': self.messages.count(),
+        }
+
+
+class ChatMessage(db.Model):
+    """Individual chat messages"""
+    __tablename__ = 'chat_messages'
+
+    id = db.Column(db.Integer, primary_key=True)
+    conversation_id = db.Column(db.String(64), db.ForeignKey('chat_conversations.conversation_id'), nullable=False, index=True)
+    role = db.Column(db.String(20), nullable=False)  # user, assistant, system, tool
+    content = db.Column(db.Text, nullable=False)
+    metadata_json = db.Column(db.JSON)  # tool calls, model used, tokens, thinking content
+
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'role': self.role,
+            'content': self.content,
+            'metadata': self.metadata_json or {},
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+        }
+
+
+class MemoryEmbedding(db.Model):
+    """Semantic memory store for cross-conversation recall via vector search."""
+    __tablename__ = 'memory_embeddings'
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False, index=True)
+    content = db.Column(db.Text, nullable=False)
+    embedding = db.Column(db.Text)  # JSON-serialized float array (1536 dims)
+    source_type = db.Column(db.String(50))  # 'conversation', 'soul', 'manual'
+    source_id = db.Column(db.String(100))  # conversation_id or filename
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    user = db.relationship('User', backref='memory_embeddings')
+
+    __table_args__ = (
+        db.Index('ix_memory_user_source', 'user_id', 'source_type'),
+    )
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'content': self.content,
+            'source_type': self.source_type,
+            'source_id': self.source_id,
+            'has_embedding': bool(self.embedding),
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+        }
+
+
+class WebBrowsingResult(db.Model):
+    """Web browsing/research history and cache"""
+    __tablename__ = 'web_browsing_results'
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    conversation_id = db.Column(db.String(64), nullable=True)  # Links to chat if triggered from there
+
+    query = db.Column(db.Text, nullable=False)
+    urls_fetched = db.Column(db.JSON)  # List of URLs fetched
+    extracted_content = db.Column(db.Text)  # Raw extracted text
+    ai_summary = db.Column(db.Text)  # AI-generated summary
+
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    user = db.relationship('User', backref='web_browsing_results')
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'query': self.query,
+            'urls_fetched': self.urls_fetched or [],
+            'ai_summary': self.ai_summary,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+        }
+
+
+# ============================================
+# Observability Layer Models
+# ============================================
+
+class ObsApiKey(db.Model):
+    """API keys for external event ingestion, scoped to a user (workspace)."""
+    __tablename__ = 'obs_api_keys'
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    key_hash = db.Column(db.String(64), unique=True, nullable=False, index=True)
+    key_prefix = db.Column(db.String(12), nullable=False)  # e.g. "obsk_a3f1..."
+    name = db.Column(db.String(100), nullable=False, default='default')
+    is_active = db.Column(db.Boolean, default=True, nullable=False)
+    last_used_at = db.Column(db.DateTime)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    user = db.relationship('User', backref='obs_api_keys')
+
+    @staticmethod
+    def hash_key(raw_key):
+        return hashlib.sha256(raw_key.encode()).hexdigest()
+
+    @classmethod
+    def create_for_user(cls, user_id, name='default'):
+        raw_key = f"obsk_{secrets.token_hex(24)}"
+        api_key = cls(
+            user_id=user_id,
+            key_hash=cls.hash_key(raw_key),
+            key_prefix=raw_key[:12],
+            name=name,
+        )
+        db.session.add(api_key)
+        return api_key, raw_key
+
+    @classmethod
+    def lookup(cls, raw_key):
+        h = cls.hash_key(raw_key)
+        return cls.query.filter_by(key_hash=h, is_active=True).first()
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'key_prefix': self.key_prefix,
+            'name': self.name,
+            'is_active': self.is_active,
+            'last_used_at': self.last_used_at.isoformat() if self.last_used_at else None,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+        }
+
+
+class ObsEvent(db.Model):
+    """Append-only event log for all agent observability data."""
+    __tablename__ = 'obs_events'
+
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    uid = db.Column(db.String(36), unique=True, nullable=False, index=True)  # UUID
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    agent_id = db.Column(db.Integer, db.ForeignKey('agents.id'), nullable=True)
+    run_id = db.Column(db.String(36), nullable=True, index=True)
+    event_type = db.Column(db.String(50), nullable=False, index=True)
+    status = db.Column(db.String(20), nullable=False, default='info')  # success, error, info
+    model = db.Column(db.String(200), nullable=True)
+    tokens_in = db.Column(db.Integer, nullable=True)
+    tokens_out = db.Column(db.Integer, nullable=True)
+    cost_usd = db.Column(db.Numeric(12, 8), nullable=True)
+    latency_ms = db.Column(db.Integer, nullable=True)
+    payload = db.Column(db.JSON, nullable=False, default=dict)
+    dedupe_key = db.Column(db.String(255), nullable=True, unique=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False, index=True)
+
+    user = db.relationship('User', backref='obs_events')
+    agent = db.relationship('Agent', backref='obs_events')
+
+    def to_dict(self):
+        return {
+            'id': self.uid,
+            'agent_id': self.agent_id,
+            'run_id': self.run_id,
+            'event_type': self.event_type,
+            'status': self.status,
+            'model': self.model,
+            'tokens_in': self.tokens_in,
+            'tokens_out': self.tokens_out,
+            'cost_usd': float(self.cost_usd) if self.cost_usd else None,
+            'latency_ms': self.latency_ms,
+            'payload': self.payload,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+        }
+
+
+class ObsRun(db.Model):
+    """Tracks a single agent run (e.g. one LLM pipeline execution)."""
+    __tablename__ = 'obs_runs'
+
+    id = db.Column(db.Integer, primary_key=True)
+    run_id = db.Column(db.String(36), unique=True, nullable=False, index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    agent_id = db.Column(db.Integer, db.ForeignKey('agents.id'), nullable=True)
+    status = db.Column(db.String(20), default='running')  # running, success, error
+    model = db.Column(db.String(200), nullable=True)
+    total_tokens_in = db.Column(db.Integer, default=0)
+    total_tokens_out = db.Column(db.Integer, default=0)
+    total_cost_usd = db.Column(db.Numeric(12, 8), default=0)
+    total_latency_ms = db.Column(db.Integer, default=0)
+    tool_calls_count = db.Column(db.Integer, default=0)
+    error_message = db.Column(db.Text, nullable=True)
+    metadata_json = db.Column(db.JSON, default=dict)
+    started_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    finished_at = db.Column(db.DateTime, nullable=True)
+
+    user = db.relationship('User', backref='obs_runs')
+    agent = db.relationship('Agent', backref='obs_runs')
+
+    def to_dict(self):
+        return {
+            'run_id': self.run_id,
+            'agent_id': self.agent_id,
+            'status': self.status,
+            'model': self.model,
+            'total_tokens_in': self.total_tokens_in,
+            'total_tokens_out': self.total_tokens_out,
+            'total_cost_usd': float(self.total_cost_usd) if self.total_cost_usd else 0,
+            'total_latency_ms': self.total_latency_ms,
+            'tool_calls_count': self.tool_calls_count,
+            'error_message': self.error_message,
+            'started_at': self.started_at.isoformat() if self.started_at else None,
+            'finished_at': self.finished_at.isoformat() if self.finished_at else None,
+        }
+
+
+class ObsAgentDailyMetrics(db.Model):
+    """Pre-aggregated daily metrics per agent."""
+    __tablename__ = 'obs_agent_daily_metrics'
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    agent_id = db.Column(db.Integer, db.ForeignKey('agents.id'), nullable=True)
+    date = db.Column(db.Date, nullable=False)
+    total_runs = db.Column(db.Integer, default=0)
+    successful_runs = db.Column(db.Integer, default=0)
+    failed_runs = db.Column(db.Integer, default=0)
+    total_events = db.Column(db.Integer, default=0)
+    total_tokens_in = db.Column(db.Integer, default=0)
+    total_tokens_out = db.Column(db.Integer, default=0)
+    total_cost_usd = db.Column(db.Numeric(12, 8), default=0)
+    total_tool_calls = db.Column(db.Integer, default=0)
+    tool_errors = db.Column(db.Integer, default=0)
+    latency_p50_ms = db.Column(db.Integer, nullable=True)
+    latency_p95_ms = db.Column(db.Integer, nullable=True)
+    latency_avg_ms = db.Column(db.Integer, nullable=True)
+    models_used = db.Column(db.JSON, default=dict)  # {"gpt-4o": 5, "claude-3": 3}
+    last_heartbeat_at = db.Column(db.DateTime, nullable=True)
+
+    user = db.relationship('User', backref='obs_daily_metrics')
+    agent = db.relationship('Agent', backref='obs_daily_metrics')
+
+    __table_args__ = (db.UniqueConstraint('user_id', 'agent_id', 'date', name='_obs_daily_uc'),)
+
+    def to_dict(self):
+        total = self.total_runs or 0
+        return {
+            'date': self.date.isoformat() if self.date else None,
+            'agent_id': self.agent_id,
+            'total_runs': total,
+            'successful_runs': self.successful_runs or 0,
+            'failed_runs': self.failed_runs or 0,
+            'success_rate': round((self.successful_runs or 0) / total, 4) if total else 0,
+            'error_rate': round((self.failed_runs or 0) / total, 4) if total else 0,
+            'total_tokens_in': self.total_tokens_in or 0,
+            'total_tokens_out': self.total_tokens_out or 0,
+            'total_cost_usd': float(self.total_cost_usd) if self.total_cost_usd else 0,
+            'total_tool_calls': self.total_tool_calls or 0,
+            'tool_errors': self.tool_errors or 0,
+            'latency_p50_ms': self.latency_p50_ms,
+            'latency_p95_ms': self.latency_p95_ms,
+            'latency_avg_ms': self.latency_avg_ms,
+            'models_used': self.models_used or {},
+            'last_heartbeat_at': self.last_heartbeat_at.isoformat() if self.last_heartbeat_at else None,
+        }
+
+
+class ObsAlertRule(db.Model):
+    """User-defined alert rules evaluated by cron."""
+    __tablename__ = 'obs_alert_rules'
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    agent_id = db.Column(db.Integer, db.ForeignKey('agents.id'), nullable=True)  # NULL = workspace-wide
+    name = db.Column(db.String(100), nullable=False)
+    rule_type = db.Column(db.String(50), nullable=False)  # cost_per_day, error_rate, no_heartbeat
+    threshold = db.Column(db.Numeric(12, 4), nullable=False)
+    window_minutes = db.Column(db.Integer, default=60)
+    cooldown_minutes = db.Column(db.Integer, default=360)
+    is_enabled = db.Column(db.Boolean, default=True, nullable=False)
+    last_triggered_at = db.Column(db.DateTime, nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    user = db.relationship('User', backref='obs_alert_rules')
+    agent = db.relationship('Agent', backref='obs_alert_rules')
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'agent_id': self.agent_id,
+            'name': self.name,
+            'rule_type': self.rule_type,
+            'threshold': float(self.threshold),
+            'window_minutes': self.window_minutes,
+            'cooldown_minutes': self.cooldown_minutes,
+            'is_enabled': self.is_enabled,
+            'last_triggered_at': self.last_triggered_at.isoformat() if self.last_triggered_at else None,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+        }
+
+
+class ObsAlertEvent(db.Model):
+    """Fired alerts history."""
+    __tablename__ = 'obs_alert_events'
+
+    id = db.Column(db.Integer, primary_key=True)
+    rule_id = db.Column(db.Integer, db.ForeignKey('obs_alert_rules.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    agent_id = db.Column(db.Integer, db.ForeignKey('agents.id'), nullable=True)
+    metric_value = db.Column(db.Numeric(12, 4), nullable=False)
+    threshold_value = db.Column(db.Numeric(12, 4), nullable=False)
+    rule_type = db.Column(db.String(50), nullable=False)
+    message = db.Column(db.Text, nullable=False)
+    notified_slack = db.Column(db.Boolean, default=False)
+    acknowledged_at = db.Column(db.DateTime, nullable=True)
+    triggered_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+
+    rule = db.relationship('ObsAlertRule', backref='alert_events')
+    user = db.relationship('User', backref='obs_alert_events')
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'rule_id': self.rule_id,
+            'agent_id': self.agent_id,
+            'rule_type': self.rule_type,
+            'metric_value': float(self.metric_value),
+            'threshold_value': float(self.threshold_value),
+            'message': self.message,
+            'notified_slack': self.notified_slack,
+            'acknowledged_at': self.acknowledged_at.isoformat() if self.acknowledged_at else None,
+            'triggered_at': self.triggered_at.isoformat() if self.triggered_at else None,
+        }
+
+
+class ObsLlmPricing(db.Model):
+    """Reference table for LLM token costs per provider/model."""
+    __tablename__ = 'obs_llm_pricing'
+
+    id = db.Column(db.Integer, primary_key=True)
+    provider = db.Column(db.String(50), nullable=False)
+    model = db.Column(db.String(200), nullable=False)
+    input_cost_per_mtok = db.Column(db.Numeric(10, 4), nullable=False)   # USD per 1M input tokens
+    output_cost_per_mtok = db.Column(db.Numeric(10, 4), nullable=False)  # USD per 1M output tokens
+    effective_from = db.Column(db.Date, nullable=False)
+    effective_to = db.Column(db.Date, nullable=True)  # NULL = current
+
+    __table_args__ = (db.UniqueConstraint('provider', 'model', 'effective_from', name='_obs_pricing_uc'),)
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'provider': self.provider,
+            'model': self.model,
+            'input_cost_per_mtok': float(self.input_cost_per_mtok),
+            'output_cost_per_mtok': float(self.output_cost_per_mtok),
+            'effective_from': self.effective_from.isoformat(),
+            'effective_to': self.effective_to.isoformat() if self.effective_to else None,
+        }
+
+
+class WorkspaceTier(db.Model):
+    """Observability tier configuration per workspace.
+
+    Each workspace (currently == user) gets a row that controls feature limits.
+    All enforcement reads from this table — no hard-coded limits elsewhere.
+    Missing row → treated as 'free' tier via get_workspace_tier().
+    """
+    __tablename__ = 'workspace_tiers'
+
+    workspace_id = db.Column(db.Integer, db.ForeignKey('users.id'), primary_key=True)
+    tier_name = db.Column(db.String(50), nullable=False, default='free')  # free | production | pro | agency
+    agent_limit = db.Column(db.Integer, nullable=False, default=2)
+    retention_days = db.Column(db.Integer, nullable=False, default=7)
+    alert_rule_limit = db.Column(db.Integer, nullable=False, default=0)
+    health_history_days = db.Column(db.Integer, nullable=False, default=0)
+    anomaly_detection_enabled = db.Column(db.Boolean, nullable=False, default=False)
+    slack_notifications_enabled = db.Column(db.Boolean, nullable=False, default=False)
+    multi_workspace_enabled = db.Column(db.Boolean, nullable=False, default=False)
+    priority_processing = db.Column(db.Boolean, nullable=False, default=False)
+    max_api_keys = db.Column(db.Integer, nullable=False, default=1)
+    max_batch_size = db.Column(db.Integer, nullable=False, default=100)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    user = db.relationship('User', backref=db.backref('workspace_tier', uselist=False))
+
+    # Canonical tier defaults — used by seed migration and get_workspace_tier() fallback.
+    TIER_DEFAULTS = {
+        'free': dict(
+            agent_limit=2, retention_days=7, alert_rule_limit=0,
+            health_history_days=0, anomaly_detection_enabled=False,
+            slack_notifications_enabled=False, multi_workspace_enabled=False,
+            priority_processing=False, max_api_keys=1, max_batch_size=100,
+        ),
+        'production': dict(
+            agent_limit=10, retention_days=30, alert_rule_limit=3,
+            health_history_days=7, anomaly_detection_enabled=False,
+            slack_notifications_enabled=True, multi_workspace_enabled=False,
+            priority_processing=False, max_api_keys=3, max_batch_size=500,
+        ),
+        'pro': dict(
+            agent_limit=50, retention_days=90, alert_rule_limit=9999,
+            health_history_days=30, anomaly_detection_enabled=True,
+            slack_notifications_enabled=True, multi_workspace_enabled=False,
+            priority_processing=False, max_api_keys=10, max_batch_size=1000,
+        ),
+        'agency': dict(
+            agent_limit=9999, retention_days=180, alert_rule_limit=9999,
+            health_history_days=90, anomaly_detection_enabled=True,
+            slack_notifications_enabled=True, multi_workspace_enabled=True,
+            priority_processing=True, max_api_keys=9999, max_batch_size=1000,
+        ),
+    }
+
+    def to_dict(self):
+        return {
+            'workspace_id': self.workspace_id,
+            'tier_name': self.tier_name,
+            'agent_limit': self.agent_limit,
+            'retention_days': self.retention_days,
+            'alert_rule_limit': self.alert_rule_limit,
+            'health_history_days': self.health_history_days,
+            'anomaly_detection_enabled': self.anomaly_detection_enabled,
+            'slack_notifications_enabled': self.slack_notifications_enabled,
+            'multi_workspace_enabled': self.multi_workspace_enabled,
+            'priority_processing': self.priority_processing,
+            'max_api_keys': self.max_api_keys,
+            'max_batch_size': self.max_batch_size,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None,
+        }
+
+
+class ObsAgentHealthDaily(db.Model):
+    """Daily composite health score per agent (premium feature)."""
+    __tablename__ = 'obs_agent_health_daily'
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    agent_id = db.Column(db.Integer, db.ForeignKey('agents.id'), nullable=False)
+    date = db.Column(db.Date, nullable=False)
+    score = db.Column(db.Numeric(5, 2), nullable=False)  # 0.00 - 100.00
+    success_rate_score = db.Column(db.Numeric(5, 2), nullable=False)
+    latency_score = db.Column(db.Numeric(5, 2), nullable=False)
+    error_burst_score = db.Column(db.Numeric(5, 2), nullable=False)
+    cost_anomaly_score = db.Column(db.Numeric(5, 2), nullable=False)
+    details = db.Column(db.JSON, default=dict)  # Full breakdown
+    computed_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    user = db.relationship('User', backref='obs_health_scores')
+    agent = db.relationship('Agent', backref='obs_health_scores')
+
+    __table_args__ = (db.UniqueConstraint('user_id', 'agent_id', 'date', name='_obs_health_daily_uc'),)
+
+    def to_dict(self):
+        return {
+            'date': self.date.isoformat() if self.date else None,
+            'agent_id': self.agent_id,
+            'score': float(self.score),
+            'breakdown': {
+                'success_rate': float(self.success_rate_score),
+                'latency': float(self.latency_score),
+                'error_burst': float(self.error_burst_score),
+                'cost_anomaly': float(self.cost_anomaly_score),
+            },
+            'details': self.details or {},
+            'computed_at': self.computed_at.isoformat() if self.computed_at else None,
+        }
+
+
+# ---------------------------------------------------------------------------
+# Risk Engine models
+# ---------------------------------------------------------------------------
+
+class RiskPolicy(db.Model):
+    """Configurable risk policy that defines thresholds and automated actions.
+
+    One policy per (workspace, agent, policy_type). agent_id=NULL means workspace-wide.
+    """
+    __tablename__ = 'risk_policies'
+
+    VALID_POLICY_TYPES = frozenset({'daily_spend_cap', 'error_rate_cap', 'token_rate_cap'})
+    VALID_ACTION_TYPES = frozenset({'alert_only', 'throttle', 'model_downgrade', 'pause_agent'})
+
+    id = db.Column(db.Integer, primary_key=True)
+    workspace_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False, index=True)
+    agent_id = db.Column(db.Integer, db.ForeignKey('agents.id'), nullable=True)
+    policy_type = db.Column(db.String(50), nullable=False)
+    threshold_value = db.Column(db.Numeric(12, 4), nullable=False)
+    action_type = db.Column(db.String(50), nullable=False)
+    cooldown_minutes = db.Column(db.Integer, nullable=False, default=360)
+    is_enabled = db.Column(db.Boolean, nullable=False, default=True)
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    user = db.relationship('User', backref='risk_policies')
+    agent = db.relationship('Agent', backref='risk_policies')
+
+    __table_args__ = (
+        db.UniqueConstraint('workspace_id', 'agent_id', 'policy_type', name='_risk_policy_scope_uc'),
+        db.Index('ix_risk_policies_ws_enabled', 'workspace_id', 'is_enabled'),
+    )
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'workspace_id': self.workspace_id,
+            'agent_id': self.agent_id,
+            'policy_type': self.policy_type,
+            'threshold_value': str(self.threshold_value),
+            'action_type': self.action_type,
+            'cooldown_minutes': self.cooldown_minutes,
+            'is_enabled': self.is_enabled,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None,
+        }
+
+
+class RiskEvent(db.Model):
+    """A detected policy breach. Created by the evaluator, processed by the executor.
+
+    Status lifecycle: pending → executed | skipped | failed
+    """
+    __tablename__ = 'risk_events'
+
+    id = db.Column(db.Integer, primary_key=True)
+    uid = db.Column(db.String(36), unique=True, nullable=False, index=True)
+    policy_id = db.Column(db.Integer, db.ForeignKey('risk_policies.id'), nullable=False)
+    workspace_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    agent_id = db.Column(db.Integer, db.ForeignKey('agents.id'), nullable=True)
+    policy_type = db.Column(db.String(50), nullable=False)
+    breach_value = db.Column(db.Numeric(12, 4), nullable=False)
+    threshold_value = db.Column(db.Numeric(12, 4), nullable=False)
+    action_type = db.Column(db.String(50), nullable=False)
+    status = db.Column(db.String(20), nullable=False, default='pending')
+    evaluated_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    executed_at = db.Column(db.DateTime, nullable=True)
+    execution_result = db.Column(db.JSON, nullable=True)
+    dedupe_key = db.Column(db.String(100), unique=True, nullable=True)
+
+    policy = db.relationship('RiskPolicy', backref='risk_events')
+    user = db.relationship('User', backref='risk_events')
+    agent = db.relationship('Agent', backref='risk_events')
+
+    __table_args__ = (
+        db.Index('ix_risk_events_ws_status', 'workspace_id', 'status'),
+        db.Index('ix_risk_events_policy_status', 'policy_id', 'status'),
+        db.Index('ix_risk_events_status_eval', 'status', 'evaluated_at'),
+    )
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'uid': self.uid,
+            'policy_id': self.policy_id,
+            'workspace_id': self.workspace_id,
+            'agent_id': self.agent_id,
+            'policy_type': self.policy_type,
+            'breach_value': str(self.breach_value),
+            'threshold_value': str(self.threshold_value),
+            'action_type': self.action_type,
+            'status': self.status,
+            'evaluated_at': self.evaluated_at.isoformat() if self.evaluated_at else None,
+            'executed_at': self.executed_at.isoformat() if self.executed_at else None,
+            'execution_result': self.execution_result,
+        }
+
+
+class RiskAuditLog(db.Model):
+    """Append-only audit trail for risk interventions.
+
+    Stores before/after snapshots of agent state for every intervention.
+    """
+    __tablename__ = 'risk_audit_log'
+
+    id = db.Column(db.Integer, primary_key=True)
+    event_id = db.Column(db.Integer, db.ForeignKey('risk_events.id'), nullable=False)
+    workspace_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    agent_id = db.Column(db.Integer, db.ForeignKey('agents.id'), nullable=True)
+    action_type = db.Column(db.String(50), nullable=False)
+    previous_state = db.Column(db.JSON, nullable=False)
+    new_state = db.Column(db.JSON, nullable=False)
+    result = db.Column(db.String(20), nullable=False)  # success | failed | skipped
+    error_message = db.Column(db.Text, nullable=True)
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+
+    event = db.relationship('RiskEvent', backref='audit_logs')
+    user = db.relationship('User', backref='risk_audit_logs')
+    agent = db.relationship('Agent', backref='risk_audit_logs')
+
+    __table_args__ = (
+        db.Index('ix_risk_audit_ws_created', 'workspace_id', 'created_at'),
+        db.Index('ix_risk_audit_event', 'event_id'),
+    )
+
+
+# ---------------------------------------------------------------------------
+# Governance models — Human-Approved Policy Delegation System
+# ---------------------------------------------------------------------------
+
+class PolicyChangeRequest(db.Model):
+    """Agent-submitted request to modify a risk policy.
+
+    Status lifecycle: pending -> approved | denied | expired -> applied
+    """
+    __tablename__ = 'policy_change_requests'
+
+    VALID_STATUSES = frozenset({'pending', 'approved', 'denied', 'expired', 'applied'})
+
+    id = db.Column(db.Integer, primary_key=True)
+    workspace_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    agent_id = db.Column(db.Integer, db.ForeignKey('agents.id'), nullable=False)
+    policy_id = db.Column(db.Integer, db.ForeignKey('risk_policies.id'), nullable=True)
+    requested_changes = db.Column(db.JSON, nullable=False)
+    reason = db.Column(db.Text, nullable=False)
+    status = db.Column(db.String(20), nullable=False, default='pending')
+    requested_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    reviewed_by = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
+    reviewed_at = db.Column(db.DateTime, nullable=True)
+    expires_at = db.Column(db.DateTime, nullable=True)
+    policy_snapshot = db.Column(db.JSON, nullable=True)
+
+    workspace = db.relationship('User', foreign_keys=[workspace_id], backref='policy_change_requests')
+    agent = db.relationship('Agent', backref='policy_change_requests')
+    policy = db.relationship('RiskPolicy', backref='change_requests')
+    reviewer = db.relationship('User', foreign_keys=[reviewed_by])
+
+    __table_args__ = (
+        db.Index('ix_pcr_ws_status', 'workspace_id', 'status'),
+        db.Index('ix_pcr_agent_status', 'agent_id', 'status'),
+        db.Index('ix_pcr_status_requested', 'status', 'requested_at'),
+    )
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'workspace_id': self.workspace_id,
+            'agent_id': self.agent_id,
+            'policy_id': self.policy_id,
+            'requested_changes': self.requested_changes,
+            'reason': self.reason,
+            'status': self.status,
+            'requested_at': self.requested_at.isoformat() if self.requested_at else None,
+            'reviewed_by': self.reviewed_by,
+            'reviewed_at': self.reviewed_at.isoformat() if self.reviewed_at else None,
+            'expires_at': self.expires_at.isoformat() if self.expires_at else None,
+            'policy_snapshot': self.policy_snapshot,
+        }
+
+
+class DelegationGrant(db.Model):
+    """Time-bound, bounded autonomy grant for an agent to self-apply policy changes."""
+    __tablename__ = 'delegation_grants'
+
+    id = db.Column(db.Integer, primary_key=True)
+    workspace_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    agent_id = db.Column(db.Integer, db.ForeignKey('agents.id'), nullable=False)
+    request_id = db.Column(db.Integer, db.ForeignKey('policy_change_requests.id'), nullable=True)
+    granted_by = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    allowed_changes = db.Column(db.JSON, nullable=False)
+    max_spend_delta = db.Column(db.Numeric(12, 4), nullable=True)
+    max_model_upgrade = db.Column(db.String(50), nullable=True)
+    duration_minutes = db.Column(db.Integer, nullable=False)
+    valid_from = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    valid_to = db.Column(db.DateTime, nullable=False)
+    active = db.Column(db.Boolean, nullable=False, default=True)
+    revoked_at = db.Column(db.DateTime, nullable=True)
+    revoked_by = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
+
+    workspace = db.relationship('User', foreign_keys=[workspace_id], backref='delegation_grants')
+    agent = db.relationship('Agent', backref='delegation_grants')
+    request = db.relationship('PolicyChangeRequest', backref='delegation_grants')
+    granter = db.relationship('User', foreign_keys=[granted_by])
+    revoker = db.relationship('User', foreign_keys=[revoked_by])
+
+    __table_args__ = (
+        db.Index('ix_dg_ws_agent_active', 'workspace_id', 'agent_id', 'active'),
+        db.Index('ix_dg_active_valid_to', 'active', 'valid_to'),
+    )
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'workspace_id': self.workspace_id,
+            'agent_id': self.agent_id,
+            'request_id': self.request_id,
+            'granted_by': self.granted_by,
+            'allowed_changes': self.allowed_changes,
+            'max_spend_delta': str(self.max_spend_delta) if self.max_spend_delta else None,
+            'max_model_upgrade': self.max_model_upgrade,
+            'duration_minutes': self.duration_minutes,
+            'valid_from': self.valid_from.isoformat() if self.valid_from else None,
+            'valid_to': self.valid_to.isoformat() if self.valid_to else None,
+            'active': self.active,
+            'revoked_at': self.revoked_at.isoformat() if self.revoked_at else None,
+            'revoked_by': self.revoked_by,
+        }
+
+
+class GovernanceAuditLog(db.Model):
+    """Append-only audit trail for governance events (requests, approvals, delegations)."""
+    __tablename__ = 'governance_audit_log'
+
+    id = db.Column(db.Integer, primary_key=True)
+    workspace_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    agent_id = db.Column(db.Integer, db.ForeignKey('agents.id'), nullable=True)
+    actor_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
+    event_type = db.Column(db.String(50), nullable=False)
+    details = db.Column(db.JSON, nullable=False)
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+
+    workspace = db.relationship('User', foreign_keys=[workspace_id], backref='governance_audit_logs')
+    agent = db.relationship('Agent', backref='governance_audit_logs')
+    actor = db.relationship('User', foreign_keys=[actor_id])
+
+    __table_args__ = (
+        db.Index('ix_gov_audit_ws_created', 'workspace_id', 'created_at'),
+        db.Index('ix_gov_audit_ws_type', 'workspace_id', 'event_type'),
+    )
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'workspace_id': self.workspace_id,
+            'agent_id': self.agent_id,
+            'actor_id': self.actor_id,
+            'event_type': self.event_type,
+            'details': self.details,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+        }
+
+
+# ---------------------------------------------------------------------------
+# Collaboration: Tasks
+# ---------------------------------------------------------------------------
+
+class CollaborationTask(db.Model):
+    """Inter-agent work items for the collaboration framework."""
+    __tablename__ = 'collaboration_tasks'
+
+    id = db.Column(db.String(36), primary_key=True)
+    workspace_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False, index=True)
+
+    # Creator (exactly one should be set)
+    created_by_agent_id = db.Column(db.Integer, db.ForeignKey('agents.id'), nullable=True)
+    created_by_user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
+
+    # Assignment
+    assigned_to_agent_id = db.Column(db.Integer, db.ForeignKey('agents.id'), nullable=False)
+
+    # Delegation chain
+    parent_task_id = db.Column(db.String(36), db.ForeignKey('collaboration_tasks.id'), nullable=True)
+
+    title = db.Column(db.String(500), nullable=False)
+    input = db.Column(db.JSON)
+    output = db.Column(db.JSON, nullable=True)
+
+    VALID_STATUSES = frozenset({
+        'queued', 'running', 'blocked', 'completed', 'failed', 'canceled',
+    })
+    status = db.Column(db.String(20), nullable=False, default='queued')
+    priority = db.Column(db.Integer, nullable=False, default=0)
+    due_at = db.Column(db.DateTime, nullable=True)
+
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    # Relationships
+    workspace = db.relationship('User', foreign_keys=[workspace_id], backref='collaboration_tasks')
+    creator_agent = db.relationship('Agent', foreign_keys=[created_by_agent_id])
+    creator_user = db.relationship('User', foreign_keys=[created_by_user_id])
+    assigned_agent = db.relationship('Agent', foreign_keys=[assigned_to_agent_id])
+    parent_task = db.relationship('CollaborationTask', remote_side=[id], backref='subtasks')
+
+    __table_args__ = (
+        db.Index('ix_collab_task_ws_status', 'workspace_id', 'status'),
+        db.Index('ix_collab_task_assigned', 'assigned_to_agent_id', 'status'),
+        db.Index('ix_collab_task_parent', 'parent_task_id'),
+    )
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'workspace_id': self.workspace_id,
+            'created_by_agent_id': self.created_by_agent_id,
+            'created_by_user_id': self.created_by_user_id,
+            'assigned_to_agent_id': self.assigned_to_agent_id,
+            'parent_task_id': self.parent_task_id,
+            'title': self.title,
+            'input': self.input,
+            'output': self.output,
+            'status': self.status,
+            'priority': self.priority,
+            'due_at': self.due_at.isoformat() if self.due_at else None,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None,
+        }
+
+
+class TaskEvent(db.Model):
+    """Append-only lifecycle log for collaboration tasks."""
+    __tablename__ = 'task_events'
+
+    id = db.Column(db.Integer, primary_key=True)
+    task_id = db.Column(db.String(36), db.ForeignKey('collaboration_tasks.id'), nullable=False)
+    workspace_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    agent_id = db.Column(db.Integer, db.ForeignKey('agents.id'), nullable=True)
+
+    VALID_EVENT_TYPES = frozenset({
+        'created', 'assigned', 'started', 'progress',
+        'tool_call', 'tool_result', 'completed', 'failed', 'escalated',
+        'blocked', 'canceled',
+    })
+    event_type = db.Column(db.String(30), nullable=False)
+    payload = db.Column(db.JSON)
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+
+    # Relationships
+    task = db.relationship('CollaborationTask', backref='events')
+    agent = db.relationship('Agent', backref='task_events')
+
+    __table_args__ = (
+        db.Index('ix_task_event_task_created', 'task_id', 'created_at'),
+        db.Index('ix_task_event_ws', 'workspace_id', 'created_at'),
+    )
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'task_id': self.task_id,
+            'workspace_id': self.workspace_id,
+            'agent_id': self.agent_id,
+            'event_type': self.event_type,
+            'payload': self.payload,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+        }
+
+
+# ---------------------------------------------------------------------------
+# Collaboration: Messages
+# ---------------------------------------------------------------------------
+
+class AgentMessage(db.Model):
+    """Inter-agent and user-agent messages for collaboration."""
+    __tablename__ = 'agent_messages'
+
+    id = db.Column(db.Integer, primary_key=True)
+    workspace_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+
+    # Optional link to a collaboration task
+    task_id = db.Column(db.String(36), db.ForeignKey('collaboration_tasks.id'), nullable=True)
+    # Free-form thread grouping (UUID string)
+    thread_id = db.Column(db.String(36), nullable=True)
+
+    from_agent_id = db.Column(db.Integer, db.ForeignKey('agents.id'), nullable=True)
+    to_agent_id = db.Column(db.Integer, db.ForeignKey('agents.id'), nullable=True)
+    from_user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
+
+    VALID_ROLES = frozenset({'system', 'agent', 'user'})
+    role = db.Column(db.String(10), nullable=False, default='agent')
+
+    content = db.Column(db.Text, nullable=False)
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+
+    # Relationships
+    workspace = db.relationship('User', foreign_keys=[workspace_id], backref='agent_messages')
+    from_agent = db.relationship('Agent', foreign_keys=[from_agent_id])
+    to_agent = db.relationship('Agent', foreign_keys=[to_agent_id])
+    from_user = db.relationship('User', foreign_keys=[from_user_id])
+    task = db.relationship('CollaborationTask', backref='messages')
+
+    __table_args__ = (
+        db.Index('ix_agent_msg_task', 'task_id', 'created_at'),
+        db.Index('ix_agent_msg_thread', 'thread_id', 'created_at'),
+        db.Index('ix_agent_msg_ws', 'workspace_id', 'created_at'),
+    )
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'workspace_id': self.workspace_id,
+            'task_id': self.task_id,
+            'thread_id': self.thread_id,
+            'from_agent_id': self.from_agent_id,
+            'to_agent_id': self.to_agent_id,
+            'from_user_id': self.from_user_id,
+            'role': self.role,
+            'content': self.content,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+        }
+
+
+# ---------------------------------------------------------------------------
+# Collaboration: Team Hierarchy
+# ---------------------------------------------------------------------------
+
+class AgentRole(db.Model):
+    """Optional per-agent role within a workspace's collaboration hierarchy."""
+    __tablename__ = 'agent_roles'
+
+    id = db.Column(db.Integer, primary_key=True)
+    workspace_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    agent_id = db.Column(db.Integer, db.ForeignKey('agents.id'), nullable=False)
+
+    VALID_ROLES = frozenset({'supervisor', 'worker', 'specialist'})
+    role = db.Column(db.String(20), nullable=False, default='worker')
+
+    can_assign_to_peers = db.Column(db.Boolean, nullable=False, default=False)
+    can_escalate_to_supervisor = db.Column(db.Boolean, nullable=False, default=True)
+
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    # Relationships
+    workspace = db.relationship('User', foreign_keys=[workspace_id], backref='agent_roles')
+    agent = db.relationship('Agent', backref='agent_role')
+
+    __table_args__ = (
+        db.UniqueConstraint('workspace_id', 'agent_id', name='uq_agent_role_ws_agent'),
+        db.Index('ix_agent_role_ws', 'workspace_id'),
+    )
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'workspace_id': self.workspace_id,
+            'agent_id': self.agent_id,
+            'role': self.role,
+            'can_assign_to_peers': self.can_assign_to_peers,
+            'can_escalate_to_supervisor': self.can_escalate_to_supervisor,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None,
+        }
+
+
+class TeamRule(db.Model):
+    """Workspace-level team hierarchy settings."""
+    __tablename__ = 'team_rules'
+
+    workspace_id = db.Column(db.Integer, db.ForeignKey('users.id'), primary_key=True)
+    allow_peer_assignment = db.Column(db.Boolean, nullable=False, default=False)
+    require_supervisor_for_tasks = db.Column(db.Boolean, nullable=False, default=False)
+    default_supervisor_agent_id = db.Column(db.Integer, db.ForeignKey('agents.id'), nullable=True)
+
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    # Relationships
+    workspace = db.relationship('User', backref=db.backref('team_rules', uselist=False))
+    default_supervisor = db.relationship('Agent')
+
+    def to_dict(self):
+        return {
+            'workspace_id': self.workspace_id,
+            'allow_peer_assignment': self.allow_peer_assignment,
+            'require_supervisor_for_tasks': self.require_supervisor_for_tasks,
+            'default_supervisor_agent_id': self.default_supervisor_agent_id,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None,
+        }
+
+
+# ============================================
+# Agent Blueprint & Capability System
+# ============================================
+
+# Valid role types for blueprints
+BLUEPRINT_ROLE_TYPES = {'researcher', 'executor', 'supervisor', 'autonomous', 'worker'}
+# Valid blueprint statuses
+BLUEPRINT_STATUSES = {'draft', 'published', 'archived'}
+
+
+class AgentBlueprint(db.Model):
+    """Versioned, reusable agent profile template.
+
+    Lifecycle: draft -> published -> archived.
+    A published blueprint is the source of truth for agent instances.
+    """
+    __tablename__ = 'agent_blueprints'
+
+    id = db.Column(db.String(36), primary_key=True)
+    workspace_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False, index=True)
+    name = db.Column(db.String(200), nullable=False)
+    description = db.Column(db.Text)
+    role_type = db.Column(db.String(50), nullable=False, default='worker')
+    status = db.Column(db.String(20), nullable=False, default='draft')
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    created_by = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+
+    # Relationships
+    workspace = db.relationship('User', foreign_keys=[workspace_id],
+                                backref=db.backref('blueprints', lazy='dynamic'))
+    versions = db.relationship('AgentBlueprintVersion', backref='blueprint',
+                               lazy='dynamic', order_by='AgentBlueprintVersion.version')
+    instances = db.relationship('AgentInstance', backref='blueprint', lazy='dynamic')
+
+    def __repr__(self):
+        return f'<AgentBlueprint {self.name} ({self.status}) workspace={self.workspace_id}>'
+
+    @property
+    def latest_version(self):
+        """Return the highest version number, or 0 if no versions exist."""
+        from sqlalchemy import func
+        result = db.session.query(func.max(AgentBlueprintVersion.version)).filter_by(
+            blueprint_id=self.id
+        ).scalar()
+        return result or 0
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'workspace_id': self.workspace_id,
+            'name': self.name,
+            'description': self.description,
+            'role_type': self.role_type,
+            'status': self.status,
+            'latest_version': self.latest_version,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'created_by': self.created_by,
+        }
+
+
+class AgentBlueprintVersion(db.Model):
+    """Immutable, append-only snapshot of a blueprint configuration.
+
+    Once inserted, no column may be updated. This is the foundational
+    guarantee that makes auditing meaningful.
+    """
+    __tablename__ = 'agent_blueprint_versions'
+
+    id = db.Column(db.Integer, primary_key=True)
+    blueprint_id = db.Column(db.String(36), db.ForeignKey('agent_blueprints.id'), nullable=False, index=True)
+    version = db.Column(db.Integer, nullable=False)
+
+    # Capability definitions
+    allowed_models = db.Column(db.JSON)      # ["openai/gpt-4o", "anthropic/claude-sonnet-4-5-20250929"]
+    allowed_tools = db.Column(db.JSON)       # ["gmail_send", "calendar_read"]
+    default_risk_profile = db.Column(db.JSON)  # {daily_spend_cap: 10.00, action_type: "alert_only"}
+    hierarchy_defaults = db.Column(db.JSON)  # {role: "worker", can_assign_to_peers: false}
+    memory_strategy = db.Column(db.JSON)     # {type: "semantic", retention_days: 30}
+    escalation_rules = db.Column(db.JSON)    # {on_tool_denied: "notify_supervisor"}
+    llm_defaults = db.Column(db.JSON)        # {provider: "openai", model: "gpt-4o", temperature: 0.7}
+    identity_defaults = db.Column(db.JSON)   # {personality: "...", system_prompt: "..."}
+    override_policy = db.Column(db.JSON)     # {allowed_overrides: ["temperature"], denied_overrides: ["provider"]}
+
+    # Publish metadata
+    published_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    published_by = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    changelog = db.Column(db.Text)
+
+    __table_args__ = (
+        db.UniqueConstraint('blueprint_id', 'version', name='_blueprint_version_uc'),
+    )
+
+    def __repr__(self):
+        return f'<AgentBlueprintVersion blueprint={self.blueprint_id} v{self.version}>'
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'blueprint_id': self.blueprint_id,
+            'version': self.version,
+            'allowed_models': self.allowed_models,
+            'allowed_tools': self.allowed_tools,
+            'default_risk_profile': self.default_risk_profile,
+            'hierarchy_defaults': self.hierarchy_defaults,
+            'memory_strategy': self.memory_strategy,
+            'escalation_rules': self.escalation_rules,
+            'llm_defaults': self.llm_defaults,
+            'identity_defaults': self.identity_defaults,
+            'override_policy': self.override_policy,
+            'published_at': self.published_at.isoformat() if self.published_at else None,
+            'published_by': self.published_by,
+            'changelog': self.changelog,
+        }
+
+
+# Join table: blueprint versions <-> capability bundles (M:N)
+blueprint_capabilities = db.Table(
+    'blueprint_capabilities',
+    db.Column('blueprint_version_id', db.Integer,
+              db.ForeignKey('agent_blueprint_versions.id'), primary_key=True),
+    db.Column('capability_id', db.Integer,
+              db.ForeignKey('capability_bundles.id'), primary_key=True),
+)
+
+
+class CapabilityBundle(db.Model):
+    """Named, reusable permission set attachable to blueprint versions.
+
+    Defines what tools, models, and risk constraints a capability grants.
+    """
+    __tablename__ = 'capability_bundles'
+
+    id = db.Column(db.Integer, primary_key=True)
+    workspace_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False, index=True)
+    name = db.Column(db.String(200), nullable=False)
+    description = db.Column(db.Text)
+    tool_set = db.Column(db.JSON)             # ["gmail_send", "gmail_read", "gmail_draft"]
+    model_constraints = db.Column(db.JSON)    # {allowed_providers: ["openai"], max_model_tier: "standard"}
+    risk_constraints = db.Column(db.JSON)     # {max_daily_spend: 5.00, max_single_action_cost: 1.00}
+    is_system = db.Column(db.Boolean, nullable=False, default=False)
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    # Relationships
+    blueprint_versions = db.relationship(
+        'AgentBlueprintVersion', secondary=blueprint_capabilities,
+        backref=db.backref('capabilities', lazy='select'),
+        lazy='select',
+    )
+
+    __table_args__ = (
+        db.UniqueConstraint('workspace_id', 'name', name='_workspace_capability_name_uc'),
+    )
+
+    def __repr__(self):
+        return f'<CapabilityBundle {self.name} workspace={self.workspace_id}>'
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'workspace_id': self.workspace_id,
+            'name': self.name,
+            'description': self.description,
+            'tool_set': self.tool_set,
+            'model_constraints': self.model_constraints,
+            'risk_constraints': self.risk_constraints,
+            'is_system': self.is_system,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None,
+        }
+
+
+class AgentInstance(db.Model):
+    """Binding of an Agent to a specific blueprint version with constrained overrides.
+
+    One agent maps to at most one instance (1:1). Agents without an instance
+    binding operate in legacy mode with no capability restrictions.
+    """
+    __tablename__ = 'agent_instances'
+
+    id = db.Column(db.Integer, primary_key=True)
+    agent_id = db.Column(db.Integer, db.ForeignKey('agents.id'), nullable=False, unique=True)
+    blueprint_id = db.Column(db.String(36), db.ForeignKey('agent_blueprints.id'), nullable=False)
+    blueprint_version = db.Column(db.Integer, nullable=False)
+    workspace_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False, index=True)
+    overrides = db.Column(db.JSON)           # limited set, validated against override_policy
+    policy_snapshot = db.Column(db.JSON, nullable=False)  # full resolved capability at instantiation
+    instantiated_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    instantiated_by = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    last_policy_refresh = db.Column(db.DateTime)
+
+    # Relationships
+    agent = db.relationship('Agent', backref=db.backref('instance', uselist=False))
+
+    def __repr__(self):
+        return (f'<AgentInstance agent={self.agent_id} '
+                f'blueprint={self.blueprint_id} v{self.blueprint_version}>')
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'agent_id': self.agent_id,
+            'blueprint_id': self.blueprint_id,
+            'blueprint_version': self.blueprint_version,
+            'workspace_id': self.workspace_id,
+            'overrides': self.overrides,
+            'policy_snapshot': self.policy_snapshot,
+            'instantiated_at': self.instantiated_at.isoformat() if self.instantiated_at else None,
+            'instantiated_by': self.instantiated_by,
+            'last_policy_refresh': self.last_policy_refresh.isoformat() if self.last_policy_refresh else None,
         }

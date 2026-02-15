@@ -27,161 +27,180 @@
         </p>
     </div>
 
-    <div class="container">
-        <div class="app-layout">
-            <!-- Left Sidebar Navigation -->
-            <aside class="sidebar">
-                <div style="padding: 20px 16px; border-bottom: 1px solid var(--border);">
-                    <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
-                        <span style="font-size: 24px;">🐵</span>
-                        <span style="font-size: 16px; font-weight: 600; color: var(--text-primary);">Green Monkey</span>
+    <!-- Top Navigation Bar -->
+    <nav class="topnav">
+        <div class="topnav-inner">
+            <div class="topnav-brand">
+                <span style="font-size: 22px;">🐵</span>
+                <span class="topnav-brand-text">Green Monkey</span>
+            </div>
+
+            <button class="topnav-hamburger" id="topnav-hamburger" aria-label="Toggle menu">
+                <span></span><span></span><span></span>
+            </button>
+
+            <div class="topnav-links" id="topnav-links">
+                <button class="topnav-item active" data-tab="overview">Overview</button>
+
+                <div class="topnav-dropdown" data-group="agents">
+                    <button class="topnav-item topnav-dropdown-toggle">Agents <span class="topnav-arrow">▾</span></button>
+                    <div class="topnav-dropdown-menu">
+                        <button class="topnav-dropdown-item" data-tab="agents">
+                            <span class="topnav-dropdown-icon">🤖</span> Agents
+                        </button>
+                        <button class="topnav-dropdown-item" data-tab="identity">
+                            <span class="topnav-dropdown-icon">👤</span> Identity
+                        </button>
+                        <button class="topnav-dropdown-item" data-tab="user">
+                            <span class="topnav-dropdown-icon">📝</span> User Info
+                        </button>
+                        <button class="topnav-dropdown-item" data-tab="soul">
+                            <span class="topnav-dropdown-icon">✨</span> Soul &amp; Behavior
+                        </button>
+                        <button class="topnav-dropdown-item" data-tab="tools">
+                            <span class="topnav-dropdown-icon">🛠️</span> Tools
+                        </button>
+                        <button class="topnav-dropdown-item" data-tab="security">
+                            <span class="topnav-dropdown-icon">🔒</span> Security
+                        </button>
                     </div>
-                    <p style="font-size: 12px; color: var(--text-tertiary); margin: 0;">AI Agent Management</p>
                 </div>
 
-                <nav>
-                    <div class="nav-section">
-                        <button class="nav-item active" data-tab="overview">
-                            <span class="nav-item-icon">📋</span>
-                            <span>Overview</span>
+                <div class="topnav-dropdown" data-group="tasks">
+                    <button class="topnav-item topnav-dropdown-toggle">Tasks <span class="topnav-arrow">▾</span></button>
+                    <div class="topnav-dropdown-menu">
+                        <button class="topnav-dropdown-item" data-tab="collab-tasks">
+                            <span class="topnav-dropdown-icon">📋</span> Task Queue
                         </button>
-                        <button class="nav-item" data-tab="llm">
-                            <span class="nav-item-icon">🔌</span>
-                            <span>LLM Connection</span>
-                        </button>
-                        <button class="nav-item" data-tab="identity">
-                            <span class="nav-item-icon">👤</span>
-                            <span>Identity</span>
-                        </button>
-                        <button class="nav-item" data-tab="user">
-                            <span class="nav-item-icon">📝</span>
-                            <span>User Info</span>
-                        </button>
-                        <button class="nav-item" data-tab="soul">
-                            <span class="nav-item-icon">✨</span>
-                            <span>Soul & Behavior</span>
-                        </button>
-                        <button class="nav-item" data-tab="tools">
-                            <span class="nav-item-icon">🛠️</span>
-                            <span>Tools</span>
-                        </button>
-                        <button class="nav-item" data-tab="security">
-                            <span class="nav-item-icon">🔒</span>
-                            <span>Security</span>
+                        <button class="topnav-dropdown-item" data-tab="collab-team">
+                            <span class="topnav-dropdown-icon">👥</span> Team Hierarchy
                         </button>
                     </div>
+                </div>
 
-                    <div style="border-top: 1px solid var(--border); margin: 8px 0;"></div>
-
-                    <div class="nav-section">
-                        <div class="nav-section-title">Integrations</div>
-                        <button class="nav-item" data-tab="moltbook">
-                            <span class="nav-item-icon">🦞</span>
-                            <span>Moltbook</span>
+                <div class="topnav-dropdown" data-group="governance">
+                    <button class="topnav-item topnav-dropdown-toggle">Governance <span class="topnav-arrow">▾</span></button>
+                    <div class="topnav-dropdown-menu">
+                        <button class="topnav-dropdown-item" data-tab="governance">
+                            <span class="topnav-dropdown-icon">🛡️</span> Risk Policies
+                            <span id="governance-pending-badge" class="badge" style="display: none; margin-left: auto; background: var(--primary); color: white; font-size: 11px; padding: 2px 6px; border-radius: 10px;">0</span>
                         </button>
-                        <button class="nav-item" data-tab="feed">
-                            <span class="nav-item-icon">📖</span>
-                            <span>Feed</span>
-                        </button>
-                        <button class="nav-item" data-tab="analytics">
-                            <span class="nav-item-icon">📊</span>
-                            <span>Analytics</span>
-                        </button>
-                        <button class="nav-item" data-tab="channels">
-                            <span class="nav-item-icon">💬</span>
-                            <span>Channels</span>
-                        </button>
-                        <button class="nav-item" data-tab="providers">
-                            <span class="nav-item-icon">🤖</span>
-                            <span>Providers</span>
-                        </button>
-                        <button class="nav-item" data-tab="connect">
-                            <span class="nav-item-icon">🔌</span>
-                            <span>Connect</span>
-                        </button>
-                        <button class="nav-item" data-tab="actions">
-                            <span class="nav-item-icon">✅</span>
-                            <span>Actions</span>
+                        <button class="topnav-dropdown-item" data-tab="actions">
+                            <span class="topnav-dropdown-icon">✅</span> Approval Queue
                             <span id="pending-actions-badge" class="badge" style="display: none; margin-left: auto; background: var(--primary); color: white; font-size: 11px; padding: 2px 6px; border-radius: 10px;">0</span>
                         </button>
-                    </div>
-
-                    <div style="border-top: 1px solid var(--border); margin: 8px 0;"></div>
-
-                    <div class="nav-section">
-                        <button class="nav-item" data-tab="subscription">
-                            <span class="nav-item-icon">💎</span>
-                            <span>Subscription</span>
-                        </button>
-                        <button class="nav-item" data-tab="agents">
-                            <span class="nav-item-icon">🤖</span>
-                            <span>My Agents</span>
-                        </button>
-                        <button class="nav-item" id="admin-tab-button" data-tab="admin" style="display: none;">
-                            <span class="nav-item-icon">🔐</span>
-                            <span>Admin</span>
-                        </button>
-                        <button class="nav-item" data-tab="export">
-                            <span class="nav-item-icon">💾</span>
-                            <span>Export</span>
+                        <button class="topnav-dropdown-item" data-tab="chatbot">
+                            <span class="topnav-dropdown-icon">💬</span> Chatbot
                         </button>
                     </div>
-                </nav>
-            </aside>
+                </div>
 
+                <div class="topnav-dropdown" data-group="observability">
+                    <button class="topnav-item topnav-dropdown-toggle">Observability <span class="topnav-arrow">▾</span></button>
+                    <div class="topnav-dropdown-menu">
+                        <button class="topnav-dropdown-item" data-tab="observability">
+                            <span class="topnav-dropdown-icon">📡</span> Live Activity
+                        </button>
+                        <button class="topnav-dropdown-item" data-tab="analytics">
+                            <span class="topnav-dropdown-icon">📊</span> Analytics
+                        </button>
+                    </div>
+                </div>
+
+                <div class="topnav-dropdown" data-group="integrations">
+                    <button class="topnav-item topnav-dropdown-toggle">Integrations <span class="topnav-arrow">▾</span></button>
+                    <div class="topnav-dropdown-menu">
+                        <button class="topnav-dropdown-item" data-tab="connect">
+                            <span class="topnav-dropdown-icon">🔌</span> Services
+                        </button>
+                        <button class="topnav-dropdown-item" data-tab="channels">
+                            <span class="topnav-dropdown-icon">💬</span> Channels
+                        </button>
+                        <button class="topnav-dropdown-item" data-tab="providers">
+                            <span class="topnav-dropdown-icon">🤖</span> Providers
+                        </button>
+                        <button class="topnav-dropdown-item" data-tab="model-config">
+                            <span class="topnav-dropdown-icon">⚙️</span> Model Config
+                        </button>
+                        <button class="topnav-dropdown-item" data-tab="llm">
+                            <span class="topnav-dropdown-icon">🔌</span> LLM Connection
+                        </button>
+                    </div>
+                </div>
+
+                <div class="topnav-dropdown" data-group="workspace">
+                    <button class="topnav-item topnav-dropdown-toggle">Workspace <span class="topnav-arrow">▾</span></button>
+                    <div class="topnav-dropdown-menu">
+                        <button class="topnav-dropdown-item" data-tab="subscription">
+                            <span class="topnav-dropdown-icon">💎</span> Subscription
+                        </button>
+                        <button class="topnav-dropdown-item" data-tab="export">
+                            <span class="topnav-dropdown-icon">💾</span> Export
+                        </button>
+                        <button class="topnav-dropdown-item" id="admin-tab-button" data-tab="admin" style="display: none;">
+                            <span class="topnav-dropdown-icon">🔐</span> Admin
+                        </button>
+                    </div>
+                </div>
+
+                <div class="topnav-dropdown" data-group="labs">
+                    <button class="topnav-item topnav-dropdown-toggle">Labs <span class="topnav-arrow">▾</span></button>
+                    <div class="topnav-dropdown-menu">
+                        <button class="topnav-dropdown-item" data-tab="moltbook">
+                            <span class="topnav-dropdown-icon">🦞</span> Moltbook
+                        </button>
+                        <button class="topnav-dropdown-item" data-tab="feed">
+                            <span class="topnav-dropdown-icon">📖</span> Feed
+                        </button>
+                        <button class="topnav-dropdown-item" data-tab="web-browse">
+                            <span class="topnav-dropdown-icon">🌐</span> Web Browse
+                        </button>
+                        <button class="topnav-dropdown-item" data-tab="utility">
+                            <span class="topnav-dropdown-icon">🧰</span> Utility
+                        </button>
+                    </div>
+                </div>
+
+                <a href="https://docs.greenmonkey.dev" target="_blank" rel="noopener noreferrer" class="topnav-item topnav-docs-link">
+                    Docs <span style="font-size: 10px; margin-left: 2px;">↗</span>
+                </a>
+            </div>
+
+            <div class="topnav-right">
+                <button id="login-btn" class="btn btn-secondary" onclick="showLoginModal()" style="display:none;">
+                    🔐 Login
+                </button>
+                <div id="user-info" style="display: none; align-items: center; gap: 12px;">
+                    <div style="text-align: right;">
+                        <div style="font-size: 10px; color: var(--text-tertiary);">Logged in as</div>
+                        <div id="user-email" style="font-weight: 500; font-size: 12px; color: var(--text-primary);"></div>
+                    </div>
+                    <div style="height: 20px; width: 1px; background: var(--border);"></div>
+                    <div style="display: flex; align-items: center; gap: 6px;">
+                        <span id="subscription-tier-badge" style="font-weight: 600; font-size: 12px;"></span>
+                        <button onclick="showSubscriptionTab()" class="btn btn-primary" style="padding: 3px 8px; font-size: 10px;">
+                            Upgrade
+                        </button>
+                    </div>
+                    <div style="height: 20px; width: 1px; background: var(--border);"></div>
+                    <div style="display: flex; align-items: center; gap: 4px;">
+                        <span id="credit-balance" style="font-weight: 600; font-size: 13px;">0</span>
+                        <button onclick="showBuyCreditsModal()" class="btn btn-success" style="padding: 3px 8px; font-size: 10px;">
+                            + Buy
+                        </button>
+                    </div>
+                    <button onclick="logout()" class="btn btn-secondary" style="padding: 6px 12px; font-size: 12px;">
+                        Logout
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="app-layout">
             <!-- Main Content Area -->
             <main class="main-content">
-                <!-- Top Header Bar -->
-                <header class="header">
-                    <div class="header-title">
-                        <span class="monkey-logo">🐵</span>
-                        <h1>Dashboard</h1>
-                    </div>
-
-                    <!-- Auth & User Info -->
-                    <div style="display: flex; align-items: center; gap: 16px;">
-                        <!-- Login button (hidden when logged in) -->
-                        <button id="login-btn" class="btn btn-secondary" onclick="showLoginModal()" style="display:none;">
-                            🔐 Login
-                        </button>
-
-                        <!-- User info (shown when logged in) -->
-                        <div id="user-info" style="display: none; align-items: center; gap: 16px;">
-                            <div style="text-align: right;">
-                                <div style="font-size: 11px; color: var(--text-tertiary);">Logged in as</div>
-                                <div id="user-email" style="font-weight: 500; font-size: 13px; color: var(--text-primary);"></div>
-                            </div>
-
-                            <div style="height: 24px; width: 1px; background: var(--border);"></div>
-
-                            <div style="text-align: right;">
-                                <div style="font-size: 11px; color: var(--text-tertiary);">Subscription</div>
-                                <div style="display: flex; align-items: center; gap: 6px;">
-                                    <span id="subscription-tier-badge" style="font-weight: 600; font-size: 13px;"></span>
-                                    <button onclick="showSubscriptionTab()" class="btn btn-primary" style="padding: 4px 10px; font-size: 11px;">
-                                        Upgrade
-                                    </button>
-                                </div>
-                            </div>
-
-                            <div style="height: 24px; width: 1px; background: var(--border);"></div>
-
-                            <div style="text-align: right;">
-                                <div style="font-size: 11px; color: var(--text-tertiary);">Credits</div>
-                                <div style="display: flex; align-items: center; gap: 6px;">
-                                    <span id="credit-balance" style="font-weight: 600; font-size: 14px;">0</span>
-                                    <button onclick="showBuyCreditsModal()" class="btn btn-success" style="padding: 4px 10px; font-size: 11px;">
-                                        + Buy
-                                    </button>
-                                </div>
-                            </div>
-
-                            <button onclick="logout()" class="btn btn-secondary" style="padding: 8px 14px; font-size: 13px;">
-                                Logout
-                            </button>
-                        </div>
-                    </div>
-                </header>
 
                 <!-- Content Wrapper -->
                 <div class="content-wrapper">
@@ -191,55 +210,56 @@
                 <h2>Welcome to Green Monkey</h2>
 
                 <div class="info-box">
-                    <p>Green Monkey is a framework for creating a personalized AI agent with persistent memory and customized behavior. This dashboard helps you configure your agent and connect it to your preferred LLM provider.</p>
+                    <p>Configure your AI agent below, then open the chat to start talking. Connect an LLM provider, set your agent's identity, and you're ready to go.</p>
                 </div>
 
-                <!-- OpenClaw Setup CTA -->
-                <div class="setup-cta" id="openclawSetupCTA" style="display: none;">
-                    <div class="setup-cta-content">
-                        <div class="setup-cta-icon">🚀</div>
-                        <div class="setup-cta-text">
-                            <h3 style="margin: 0 0 8px 0; font-size: 18px;">Get Started with OpenClaw</h3>
-                            <p style="margin: 0; color: #64748b; font-size: 14px;">Install and configure OpenClaw in minutes with our guided setup wizard</p>
+                <!-- Nautilus AI Hero Banner -->
+                <div class="nautilus-hero" onclick="switchTab('agents')" style="cursor:pointer;">
+                    <div class="nautilus-hero-glow"></div>
+                    <div class="nautilus-hero-content">
+                        <div class="nautilus-hero-icon">🐙</div>
+                        <div class="nautilus-hero-text">
+                            <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+                                <h3 style="margin:0; font-size:20px; color:white;">Nautilus AI Agent</h3>
+                                <span id="nautilus-overview-status" class="nautilus-hero-status">
+                                    <span class="status-dot status-disconnected"></span>
+                                    Disconnected
+                                </span>
+                            </div>
+                            <p style="margin:6px 0 0; color:rgba(255,255,255,0.85); font-size:14px; line-height:1.5;">
+                                Your AI agent. Chat directly using your LLM API key, or connect to the Gateway for tool execution, web search, and memory.
+                            </p>
                         </div>
-                        <a href="/setup" class="btn btn-primary" style="text-decoration: none; white-space: nowrap;">
-                            Start Setup →
-                        </a>
+                        <div class="nautilus-hero-action">
+                            <button class="btn nautilus-hero-btn" onclick="event.stopPropagation(); switchTab('agents');">
+                                Open Chat →
+                            </button>
+                        </div>
                     </div>
-                </div>
-
-                <h3>Setup Progress</h3>
-
-                <div class="status-card">
-                    <span class="status-indicator incomplete" id="status-llm"></span>
-                    <div style="flex: 1;">
-                        <strong>LLM Connection:</strong> <span id="progress-llm">Not configured</span>
-                    </div>
-                </div>
-
-                <div class="status-card">
-                    <span class="status-indicator incomplete" id="status-identity"></span>
-                    <div style="flex: 1;">
-                        <strong>AI Identity:</strong> <span id="progress-identity">Not configured</span>
-                    </div>
-                </div>
-
-                <div class="status-card">
-                    <span class="status-indicator incomplete" id="status-user"></span>
-                    <div style="flex: 1;">
-                        <strong>User Info:</strong> <span id="progress-user">Not configured</span>
-                    </div>
-                </div>
-
-                <div class="status-card">
-                    <span class="status-indicator incomplete" id="status-soul"></span>
-                    <div style="flex: 1;">
-                        <strong>Soul & Behavior:</strong> <span id="progress-soul">Using defaults</span>
+                    <!-- Agent config status (inline) -->
+                    <div style="padding: 12px 20px; border-top: 1px solid rgba(255,255,255,0.1); display: flex; gap: 16px; flex-wrap: wrap; align-items: center;">
+                        <span style="color: rgba(255,255,255,0.5); font-size: 13px;">Agent config:</span>
+                        <span style="font-size: 13px; display: flex; align-items: center; gap: 5px;">
+                            <span class="status-indicator incomplete" id="status-llm" style="width:8px; height:8px; margin:0;"></span>
+                            <span id="progress-llm" style="color: rgba(255,255,255,0.7);">LLM not configured</span>
+                        </span>
+                        <span style="font-size: 13px; display: flex; align-items: center; gap: 5px;">
+                            <span class="status-indicator incomplete" id="status-identity" style="width:8px; height:8px; margin:0;"></span>
+                            <span id="progress-identity" style="color: rgba(255,255,255,0.7);">Identity not set</span>
+                        </span>
+                        <span style="font-size: 13px; display: flex; align-items: center; gap: 5px;">
+                            <span class="status-indicator incomplete" id="status-user" style="width:8px; height:8px; margin:0;"></span>
+                            <span id="progress-user" style="color: rgba(255,255,255,0.7);">User info not set</span>
+                        </span>
+                        <span style="font-size: 13px; display: flex; align-items: center; gap: 5px;">
+                            <span class="status-indicator incomplete" id="status-soul" style="width:8px; height:8px; margin:0;"></span>
+                            <span id="progress-soul" style="color: rgba(255,255,255,0.7);">Using defaults</span>
+                        </span>
                     </div>
                 </div>
 
                 <div class="button-group">
-                    <button class="btn btn-primary" onclick="switchTab('llm')">Start Configuration →</button>
+                    <button class="btn btn-primary" onclick="switchTab('llm')">Configure Agent →</button>
                 </div>
             </div>
 
@@ -801,8 +821,8 @@
 
                         <div style="margin-top: 20px; padding: 16px; background: rgba(244, 63, 94, 0.15); border-radius: 8px; border: 1px solid rgba(244, 63, 94, 0.4);">
                             <p style="font-size: 13px; color: rgba(255, 255, 255, 0.9);">
-                                ⏱️ <strong>Rate Limits:</strong> Free tier has a 30-minute cooldown between posts.
-                                <span style="color: var(--neon-cyan); cursor: pointer;" onclick="showSubscriptionTab()">Upgrade to Pro ($29/mo) for unlimited posting!</span>
+                                ⏱️ <strong>Rate Limits:</strong> Free = 30-min cooldown. Pro = Unlimited.
+                                <span style="color: var(--neon-cyan); cursor: pointer;" onclick="showSubscriptionTab()">Upgrade to Pro ($15/mo) for unlimited posting!</span>
                             </p>
                         </div>
                     </div>
@@ -918,7 +938,7 @@
                     <h3 style="margin: 0 0 10px 0; color: var(--text-primary); font-size: 16px; font-weight: 600;">🔒 Upgrade to Access Feed</h3>
                     <p style="color: rgba(255, 255, 255, 0.85); margin-bottom: 16px; font-size: 14px;">Browse the global Moltbook feed, discover posts from other agents, and engage with the community!</p>
                     <button class="btn btn-primary" onclick="switchTab('subscription')">
-                        Upgrade to Starter ($9/mo)
+                        Upgrade to Pro ($15/mo)
                     </button>
                 </div>
 
@@ -971,7 +991,7 @@
                     <h3 style="margin: 0 0 10px 0; color: var(--text-primary); font-size: 16px; font-weight: 600;">🔒 Upgrade to Access Analytics</h3>
                     <p style="color: rgba(255, 255, 255, 0.85); margin-bottom: 16px; font-size: 14px;">Track your karma growth, post performance, and engagement metrics!</p>
                     <button class="btn btn-primary" onclick="switchTab('subscription')">
-                        Upgrade to Starter ($9/mo)
+                        Upgrade to Pro ($15/mo)
                     </button>
                 </div>
 
@@ -1063,7 +1083,7 @@
 
             <!-- Agents Tab -->
             <div class="tab-content" id="agents">
-                <h2>🤖 My Agents</h2>
+                <h2>Agents</h2>
 
                 <!-- Agent Limit Info -->
                 <div id="agent-limit-info" class="info-box" style="margin-bottom: 24px; display: none;">
@@ -1073,10 +1093,18 @@
                     </p>
                 </div>
 
+                <!-- Type Filter Bar -->
+                <div style="display:flex; gap:8px; margin-bottom:20px; flex-wrap:wrap;">
+                    <button class="btn btn-secondary btn-sm agent-type-filter active" data-filter="all" onclick="filterAgentsByType('all')">All</button>
+                    <button class="btn btn-secondary btn-sm agent-type-filter" data-filter="direct" onclick="filterAgentsByType('direct')">Direct LLM</button>
+                    <button class="btn btn-secondary btn-sm agent-type-filter" data-filter="websocket" onclick="filterAgentsByType('websocket')">WebSocket</button>
+                    <button class="btn btn-secondary btn-sm agent-type-filter" data-filter="http_api" onclick="filterAgentsByType('http_api')">HTTP API</button>
+                </div>
+
                 <!-- Create New Agent Button -->
                 <div style="margin-bottom: 32px;">
                     <button onclick="showCreateAgentModal()" style="background: linear-gradient(135deg, var(--neon-cyan), var(--neon-purple)); padding: 14px 28px; font-size: 16px; font-weight: 600;">
-                        ➕ Create New Agent
+                        + Create New Agent
                     </button>
                 </div>
 
@@ -1085,6 +1113,161 @@
                     <p style="text-align: center; color: rgba(255, 255, 255, 0.5); padding: 40px;">
                         Loading agents...
                     </p>
+                </div>
+
+                <!-- Nautilus Gateway Section -->
+                <div class="card" style="margin-top:24px;" id="nautilus-gateway-section">
+                    <div style="display:flex; align-items:center; gap:16px; margin-bottom:16px;">
+                        <span style="font-size:36px;">🐙</span>
+                        <div style="flex:1;">
+                            <div style="display:flex; align-items:center; gap:8px;">
+                                <h3 style="margin:0;">Nautilus Gateway</h3>
+                                <span class="badge-featured">Advanced</span>
+                                <span id="nautilus-status-dot" class="status-dot status-disconnected"></span>
+                            </div>
+                            <p style="margin:4px 0 0; font-size:13px; color:var(--text-secondary);">Connect to OpenClaw Gateway for tool execution, web search, file operations, and 3-tier memory via WebSocket.</p>
+                        </div>
+                    </div>
+
+                    <div class="grid-2">
+                        <div>
+                            <label>WebSocket URL</label>
+                            <input type="text" id="nautilus-ws-url" value="ws://127.0.0.1:18789" placeholder="ws://host:port">
+                        </div>
+                        <div>
+                            <label>Auth Mode</label>
+                            <select id="nautilus-auth-mode" onchange="onNautilusAuthModeChange()">
+                                <option value="none">None</option>
+                                <option value="pairing">Pairing Token</option>
+                                <option value="password">Password</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div id="nautilus-auth-field" style="display:none; margin-top:12px;">
+                        <label id="nautilus-auth-label">Token</label>
+                        <input type="password" id="nautilus-auth-value" placeholder="Enter token or password">
+                    </div>
+
+                    <div style="display:flex; gap:12px; margin-top:16px; align-items:center;">
+                        <button class="btn btn-primary" id="nautilus-connect-btn" onclick="connectNautilus()">Connect</button>
+                        <button class="btn btn-secondary" id="nautilus-disconnect-btn" onclick="disconnectNautilus()" style="display:none;">Disconnect</button>
+                        <button class="btn btn-secondary" onclick="seedNautilus()">Reset Config</button>
+                        <span id="nautilus-connect-status" style="font-size:13px; color:var(--text-tertiary);"></span>
+                    </div>
+                </div>
+
+                <!-- Nautilus Chat Interface -->
+                <div class="card" style="margin-top:24px;">
+                    <div style="display:flex; gap:8px; border-bottom:1px solid var(--border); padding-bottom:12px; margin-bottom:16px;">
+                        <button class="nautilus-mode-tab active" data-mode="direct" onclick="switchNautilusMode('direct')">Direct LLM</button>
+                        <button class="nautilus-mode-tab" data-mode="gateway" onclick="switchNautilusMode('gateway')">Gateway</button>
+                    </div>
+
+                    <!-- Direct LLM Panel -->
+                    <div id="nautilus-direct-panel" class="nautilus-mode-panel active">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                            <div style="display:flex; align-items:center; gap:8px;">
+                                <span style="font-weight:600;">Model:</span>
+                                <span id="nautilus-model-status" class="nautilus-model-banner-value not-configured">Not configured</span>
+                                <span id="nautilus-model-indicator" class="model-indicator" style="display:none;"></span>
+                            </div>
+                            <button id="nautilus-configure-btn" class="btn btn-secondary btn-sm" onclick="switchTab('model-config')">Configure Model</button>
+                        </div>
+                        <div class="chat-layout" style="height:400px;">
+                            <div class="chat-sidebar" style="min-width:180px; max-width:200px;">
+                                <button class="btn btn-primary btn-sm" onclick="createNautilusConversation()" style="width:100%; margin-bottom:8px;">+ New Chat</button>
+                                <div id="nautilus-conversation-list" class="chat-conversation-list">
+                                    <p style="padding:12px; color:var(--text-tertiary); font-size:13px;">No conversations yet.</p>
+                                </div>
+                            </div>
+                            <div class="chat-main" style="flex:1;">
+                                <div class="chat-header">
+                                    <span id="nautilus-chat-title" style="font-weight:600;">Select or create a conversation</span>
+                                </div>
+                                <div id="nautilus-chat-messages" class="chat-messages">
+                                    <div class="chat-empty-state">
+                                        <span style="font-size:48px;">🐙</span>
+                                        <p>Send a message to start chatting with Nautilus</p>
+                                    </div>
+                                </div>
+                                <div class="chat-input-bar">
+                                    <textarea id="nautilus-chat-input" placeholder="Type a message..." rows="1" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendNautilusMessage();}"></textarea>
+                                    <button class="btn btn-primary" onclick="sendNautilusMessage()">Send</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Gateway Panel -->
+                    <div id="nautilus-gateway-panel" class="nautilus-mode-panel" style="display:none;">
+                        <div class="chat-layout" style="height:400px;">
+                            <div class="chat-main" style="flex:1;">
+                                <div id="gateway-chat-messages" class="chat-messages">
+                                    <div class="chat-empty-state">
+                                        <span style="font-size:48px;">🌐</span>
+                                        <p>Connect to the Gateway above, then start chatting</p>
+                                    </div>
+                                </div>
+                                <div class="chat-input-bar">
+                                    <textarea id="gateway-chat-input" placeholder="Type a message..." rows="1" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendGatewayMessage();}"></textarea>
+                                    <button class="btn btn-primary" onclick="sendGatewayMessage()">Send</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="agents-alert" class="alert"></div>
+
+                <!-- Agent Create/Edit Modal -->
+                <div id="agent-modal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7); z-index: 2000; display: none; align-items: center; justify-content: center;">
+                    <div style="background: var(--bg-card); border: 1px solid var(--border); border-radius: 16px; padding: 32px; max-width: 480px; width: 90%; max-height: 80vh; overflow-y: auto;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+                            <h3 id="agent-modal-title" style="margin: 0;">Create New Agent</h3>
+                            <button onclick="document.getElementById('agent-modal').style.display='none'" style="background: none; border: none; color: var(--text-secondary); font-size: 24px; cursor: pointer;">&times;</button>
+                        </div>
+                        <form id="agent-form" onsubmit="saveAgent(event)">
+                            <input type="hidden" id="agent-id" value="">
+                            <div style="margin-bottom: 16px;">
+                                <label style="display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; color: var(--text-secondary);">Agent Type</label>
+                                <select id="agent-type-select" onchange="onAgentTypeChange()" style="width: 100%; padding: 10px 14px; background: var(--bg-tertiary); border: 1px solid var(--border); border-radius: 8px; color: var(--text-primary); font-size: 14px;">
+                                    <option value="direct">Direct LLM</option>
+                                    <option value="websocket">WebSocket</option>
+                                    <option value="http_api">HTTP API</option>
+                                </select>
+                            </div>
+                            <div style="margin-bottom: 16px;">
+                                <label style="display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; color: var(--text-secondary);">Agent Name</label>
+                                <input type="text" id="agent-name" placeholder="My Agent" required style="width: 100%; padding: 10px 14px; background: var(--bg-tertiary); border: 1px solid var(--border); border-radius: 8px; color: var(--text-primary); font-size: 14px;">
+                            </div>
+                            <div style="margin-bottom: 16px;">
+                                <label style="display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; color: var(--text-secondary);">Avatar Emoji</label>
+                                <input type="text" id="agent-emoji" value="🤖" maxlength="4" style="width: 80px; padding: 10px 14px; background: var(--bg-tertiary); border: 1px solid var(--border); border-radius: 8px; color: var(--text-primary); font-size: 20px; text-align: center;">
+                            </div>
+                            <div style="margin-bottom: 16px;">
+                                <label style="display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; color: var(--text-secondary);">Description</label>
+                                <textarea id="agent-description" placeholder="What does this agent do?" rows="3" style="width: 100%; padding: 10px 14px; background: var(--bg-tertiary); border: 1px solid var(--border); border-radius: 8px; color: var(--text-primary); font-size: 14px; resize: vertical;"></textarea>
+                            </div>
+                            <!-- Connection fields (hidden for direct type) -->
+                            <div id="agent-connection-fields" style="display:none;">
+                                <div style="margin-bottom: 16px;">
+                                    <label style="display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; color: var(--text-secondary);">Connection URL</label>
+                                    <input type="text" id="agent-connection-url" placeholder="ws://host:port or https://api.example.com" style="width: 100%; padding: 10px 14px; background: var(--bg-tertiary); border: 1px solid var(--border); border-radius: 8px; color: var(--text-primary); font-size: 14px;">
+                                </div>
+                            </div>
+                            <div style="margin-bottom: 24px;">
+                                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                                    <input type="checkbox" id="agent-is-default">
+                                    <span style="font-size: 14px; color: var(--text-secondary);">Set as default agent</span>
+                                </label>
+                            </div>
+                            <div style="display: flex; gap: 12px; justify-content: flex-end;">
+                                <button type="button" onclick="document.getElementById('agent-modal').style.display='none'" class="btn btn-secondary" style="padding: 10px 20px;">Cancel</button>
+                                <button type="submit" class="btn btn-primary" style="padding: 10px 20px;">Save Agent</button>
+                            </div>
+                        </form>
+                    </div>
                 </div>
             </div>
 
@@ -1142,7 +1325,7 @@
 
                     <div style="margin-top: 16px; padding: 12px; background: rgba(244, 63, 94, 0.1); border-radius: 8px; border: 1px solid rgba(244, 63, 94, 0.3);">
                         <p style="font-size: 12px; color: rgba(255, 255, 255, 0.9);">
-                            ⏱️ <strong>Rate Limits Apply:</strong> Free tier = 30-min cooldown. Pro/Team = Unlimited.
+                            ⏱️ <strong>Rate Limits Apply:</strong> Free = 30-min cooldown. Pro = Unlimited.
                             <span style="color: var(--neon-cyan); cursor: pointer;" onclick="showSubscriptionTab()">View Plans</span>
                         </p>
                     </div>
@@ -1217,44 +1400,14 @@
                         <div class="channels-grid" id="freeChannels"></div>
                     </div>
 
-                    <!-- Starter Tier Section -->
-                    <div class="channels-tier-section">
-                        <h3 style="display: flex; align-items: center; gap: 8px; margin: 24px 0 16px 0;">
-                            <span style="font-size: 20px;">⭐</span>
-                            <span>Starter Channels</span>
-                            <span style="background: #FEF3C7; color: #92400E; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 600;">$9/MO</span>
-                        </h3>
-                        <div class="channels-grid" id="starterChannels"></div>
-                    </div>
-
                     <!-- Pro Tier Section -->
                     <div class="channels-tier-section">
                         <h3 style="display: flex; align-items: center; gap: 8px; margin: 24px 0 16px 0;">
                             <span style="font-size: 20px;">💎</span>
                             <span>Pro Channels</span>
-                            <span style="background: #DBEAFE; color: #1E40AF; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 600;">$29/MO</span>
+                            <span style="background: #DBEAFE; color: #1E40AF; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 600;">$15/MO</span>
                         </h3>
                         <div class="channels-grid" id="proChannels"></div>
-                    </div>
-
-                    <!-- Team Tier Section -->
-                    <div class="channels-tier-section">
-                        <h3 style="display: flex; align-items: center; gap: 8px; margin: 24px 0 16px 0;">
-                            <span style="font-size: 20px;">🏢</span>
-                            <span>Team Channels</span>
-                            <span style="background: #F3E8FF; color: #6B21A8; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 600;">$49/MO</span>
-                        </h3>
-                        <div class="channels-grid" id="teamChannels"></div>
-                    </div>
-
-                    <!-- Bundles Section -->
-                    <div class="channels-tier-section" style="margin-top: 48px;">
-                        <h3 style="display: flex; align-items: center; gap: 8px; margin: 24px 0 16px 0;">
-                            <span style="font-size: 20px;">📦</span>
-                            <span>Channel Bundles</span>
-                            <span style="background: linear-gradient(135deg, #667eea, #764ba2); color: white; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 600;">SAVE UP TO 30%</span>
-                        </h3>
-                        <div id="bundlesGrid" class="bundles-grid"></div>
                     </div>
                 </div>
             </div>
@@ -1298,44 +1451,14 @@
                         <div class="providers-grid" id="freeProviders"></div>
                     </div>
 
-                    <!-- Starter Tier Section -->
-                    <div class="providers-tier-section">
-                        <h3 style="display: flex; align-items: center; gap: 8px; margin: 24px 0 16px 0;">
-                            <span style="font-size: 20px;">⭐</span>
-                            <span>Starter Providers</span>
-                            <span style="background: #FEF3C7; color: #92400E; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 600;">$9/MO</span>
-                        </h3>
-                        <div class="providers-grid" id="starterProviders"></div>
-                    </div>
-
                     <!-- Pro Tier Section -->
                     <div class="providers-tier-section">
                         <h3 style="display: flex; align-items: center; gap: 8px; margin: 24px 0 16px 0;">
                             <span style="font-size: 20px;">💎</span>
                             <span>Pro Providers</span>
-                            <span style="background: #DBEAFE; color: #1E40AF; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 600;">$29/MO</span>
+                            <span style="background: #DBEAFE; color: #1E40AF; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 600;">$15/MO</span>
                         </h3>
                         <div class="providers-grid" id="proProviders"></div>
-                    </div>
-
-                    <!-- Team Tier Section -->
-                    <div class="providers-tier-section">
-                        <h3 style="display: flex; align-items: center; gap: 8px; margin: 24px 0 16px 0;">
-                            <span style="font-size: 20px;">🏢</span>
-                            <span>Team Providers</span>
-                            <span style="background: #F3E8FF; color: #6B21A8; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 600;">$49/MO</span>
-                        </h3>
-                        <div class="providers-grid" id="teamProviders"></div>
-                    </div>
-
-                    <!-- Bundles Section -->
-                    <div class="providers-tier-section" style="margin-top: 48px;">
-                        <h3 style="display: flex; align-items: center; gap: 8px; margin: 24px 0 16px 0;">
-                            <span style="font-size: 20px;">📦</span>
-                            <span>Provider Bundles</span>
-                            <span style="background: linear-gradient(135deg, #667eea, #764ba2); color: white; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 600;">SAVE UP TO 50%</span>
-                        </h3>
-                        <div id="providerBundlesGrid" class="bundles-grid"></div>
                     </div>
                 </div>
             </div>
@@ -1473,12 +1596,247 @@
                     </button>
                 </div>
 
-                <!-- More services placeholder -->
-                <div style="margin-top: 32px; padding: 24px; text-align: center; background: rgba(99, 91, 255, 0.1); border-radius: 12px; border: 2px dashed rgba(99, 91, 255, 0.3);">
-                    <h4 style="margin: 0 0 8px 0;">More Services Coming Soon</h4>
-                    <p style="margin: 0; color: var(--text-secondary); font-size: 14px;">
-                        Notion, Slack, GitHub, Shopify, and many more integrations are on the way!
+                <!-- Binance Card -->
+                <div class="service-card" data-service="binance">
+                    <div class="service-card-header">
+                        <div class="service-icon">💰</div>
+                        <div class="service-info">
+                            <h4 class="service-name">Binance</h4>
+                            <span class="service-category">Do</span>
+                        </div>
+                        <div style="margin-left: auto;">
+                            <span class="service-status" id="binance-status">Not Connected</span>
+                        </div>
+                    </div>
+                    <p class="service-description">
+                        Crypto trading superpower. View your portfolio, check prices, and propose trades through the approval queue. Read-only by default — trading requires explicit opt-in.
                     </p>
+                    <div class="service-permissions">
+                        <strong>Permissions:</strong>
+                        <ul>
+                            <li>View portfolio balances</li>
+                            <li>Check crypto prices</li>
+                            <li>Propose trades (requires approval)</li>
+                            <li>No withdrawal access</li>
+                        </ul>
+                    </div>
+
+                    <!-- Connect Form (shown when not connected) -->
+                    <div id="binance-connect-form">
+                        <div style="margin-bottom: 12px;">
+                            <label style="display: block; font-size: 13px; color: var(--text-secondary); margin-bottom: 4px;">API Key</label>
+                            <input type="text" id="binance-api-key" placeholder="Your Binance API key"
+                                   style="width: 100%; padding: 8px 12px; background: var(--bg-primary); border: 1px solid var(--border); border-radius: 6px; color: var(--text-primary); font-size: 14px; box-sizing: border-box;">
+                        </div>
+                        <div style="margin-bottom: 12px;">
+                            <label style="display: block; font-size: 13px; color: var(--text-secondary); margin-bottom: 4px;">API Secret</label>
+                            <input type="password" id="binance-api-secret" placeholder="Your Binance API secret"
+                                   style="width: 100%; padding: 8px 12px; background: var(--bg-primary); border: 1px solid var(--border); border-radius: 6px; color: var(--text-primary); font-size: 14px; box-sizing: border-box;">
+                        </div>
+                        <div style="margin-bottom: 16px;">
+                            <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-secondary); cursor: pointer;">
+                                <input type="checkbox" id="binance-testnet" style="cursor: pointer;">
+                                Use Testnet (sandbox mode for testing)
+                            </label>
+                        </div>
+                        <div style="margin-bottom: 12px; padding: 10px; background: rgba(255, 165, 0, 0.1); border: 1px solid rgba(255, 165, 0, 0.3); border-radius: 6px; font-size: 12px; color: rgba(255, 165, 0, 0.9);">
+                            Only enable <strong>Read</strong> + <strong>Spot Trading</strong> permissions on Binance. Never enable withdrawals.
+                        </div>
+                        <button class="service-connect-btn" id="binance-connect-btn" onclick="connectBinance()">
+                            🚀 Connect Binance
+                        </button>
+                    </div>
+
+                    <!-- Controls (shown when connected) -->
+                    <div id="binance-controls" style="display: none;">
+                        <div style="display: flex; gap: 8px; margin-bottom: 12px;">
+                            <button class="btn btn-secondary" onclick="loadBinancePortfolio()" style="flex: 1; padding: 8px 12px; font-size: 13px;">
+                                📊 View Portfolio
+                            </button>
+                            <button class="btn btn-secondary" onclick="loadBinancePrices()" style="flex: 1; padding: 8px 12px; font-size: 13px;">
+                                📈 Major Prices
+                            </button>
+                        </div>
+                        <div style="display: flex; align-items: center; justify-content: space-between; padding: 10px; background: rgba(0, 0, 0, 0.2); border-radius: 6px; margin-bottom: 12px;">
+                            <div>
+                                <div style="font-size: 13px; font-weight: 600; color: var(--text-primary);">Trading</div>
+                                <div style="font-size: 11px; color: var(--text-tertiary);" id="binance-trading-status">Read-only mode</div>
+                            </div>
+                            <label style="position: relative; display: inline-block; width: 44px; height: 24px; cursor: pointer;">
+                                <input type="checkbox" id="binance-trading-toggle" onchange="toggleBinanceTrading(this.checked)" style="opacity: 0; width: 0; height: 0;">
+                                <span style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: var(--border); border-radius: 12px; transition: 0.3s;"></span>
+                                <span id="binance-toggle-knob" style="position: absolute; top: 2px; left: 2px; width: 20px; height: 20px; background: white; border-radius: 50%; transition: 0.3s;"></span>
+                            </label>
+                        </div>
+                        <div id="binance-portfolio-view" style="display: none;"></div>
+                        <div id="binance-prices-view" style="display: none;"></div>
+                    </div>
+                </div>
+
+                <!-- Slack Card -->
+                <div class="service-card" data-service="slack">
+                    <div class="service-card-header">
+                        <div class="service-icon">💬</div>
+                        <div class="service-info">
+                            <h4 class="service-name">Slack</h4>
+                            <span class="service-category">Connect</span>
+                        </div>
+                        <div style="margin-left: auto;">
+                            <span class="service-status" id="slack-status">Not Connected</span>
+                        </div>
+                    </div>
+                    <p class="service-description">
+                        Connect your Slack workspace. Your agent can read channels and view messages to stay in the loop.
+                    </p>
+                    <div class="service-permissions">
+                        <strong>Permissions:</strong>
+                        <ul>
+                            <li>Read channels</li>
+                            <li>View messages</li>
+                            <li>Team info</li>
+                        </ul>
+                    </div>
+                    <button class="service-connect-btn" onclick="connectOAuthService('slack')">
+                        🚀 Connect Slack
+                    </button>
+                </div>
+
+                <!-- GitHub Card -->
+                <div class="service-card" data-service="github">
+                    <div class="service-card-header">
+                        <div class="service-icon">🐙</div>
+                        <div class="service-info">
+                            <h4 class="service-name">GitHub</h4>
+                            <span class="service-category">Connect</span>
+                        </div>
+                        <div style="margin-left: auto;">
+                            <span class="service-status" id="github-status">Not Connected</span>
+                        </div>
+                    </div>
+                    <p class="service-description">
+                        Connect your GitHub account. Your agent can view repositories and read issues to help with development workflows.
+                    </p>
+                    <div class="service-permissions">
+                        <strong>Permissions:</strong>
+                        <ul>
+                            <li>View repositories</li>
+                            <li>Read issues</li>
+                            <li>Org info</li>
+                        </ul>
+                    </div>
+                    <button class="service-connect-btn" onclick="connectOAuthService('github')">
+                        🚀 Connect GitHub
+                    </button>
+                </div>
+
+                <!-- Discord Card -->
+                <div class="service-card" data-service="discord">
+                    <div class="service-card-header">
+                        <div class="service-icon">🎮</div>
+                        <div class="service-info">
+                            <h4 class="service-name">Discord</h4>
+                            <span class="service-category">Connect</span>
+                        </div>
+                        <div style="margin-left: auto;">
+                            <span class="service-status" id="discord-status">Not Connected</span>
+                        </div>
+                    </div>
+                    <p class="service-description">
+                        Connect your Discord account. Your agent can view your servers and channels.
+                    </p>
+                    <div class="service-permissions">
+                        <strong>Permissions:</strong>
+                        <ul>
+                            <li>View servers</li>
+                            <li>Read channels</li>
+                            <li>Member info</li>
+                        </ul>
+                    </div>
+                    <button class="service-connect-btn" onclick="connectOAuthService('discord')">
+                        🚀 Connect Discord
+                    </button>
+                </div>
+
+                <!-- Spotify Card -->
+                <div class="service-card" data-service="spotify">
+                    <div class="service-card-header">
+                        <div class="service-icon">🎵</div>
+                        <div class="service-info">
+                            <h4 class="service-name">Spotify</h4>
+                            <span class="service-category">Connect</span>
+                        </div>
+                        <div style="margin-left: auto;">
+                            <span class="service-status" id="spotify-status">Not Connected</span>
+                        </div>
+                    </div>
+                    <p class="service-description">
+                        Connect your Spotify account. Your agent can see your profile, playlists, and what you're currently listening to.
+                    </p>
+                    <div class="service-permissions">
+                        <strong>Permissions:</strong>
+                        <ul>
+                            <li>Profile</li>
+                            <li>Playlists</li>
+                            <li>Now playing</li>
+                        </ul>
+                    </div>
+                    <button class="service-connect-btn" onclick="connectOAuthService('spotify')">
+                        🚀 Connect Spotify
+                    </button>
+                </div>
+
+                <!-- Todoist Card -->
+                <div class="service-card" data-service="todoist">
+                    <div class="service-card-header">
+                        <div class="service-icon">✅</div>
+                        <div class="service-info">
+                            <h4 class="service-name">Todoist</h4>
+                            <span class="service-category">Connect</span>
+                        </div>
+                        <div style="margin-left: auto;">
+                            <span class="service-status" id="todoist-status">Not Connected</span>
+                        </div>
+                    </div>
+                    <p class="service-description">
+                        Connect your Todoist account. Your agent can view your projects and tasks to help manage your to-dos.
+                    </p>
+                    <div class="service-permissions">
+                        <strong>Permissions:</strong>
+                        <ul>
+                            <li>View projects</li>
+                            <li>Read tasks</li>
+                        </ul>
+                    </div>
+                    <button class="service-connect-btn" onclick="connectOAuthService('todoist')">
+                        🚀 Connect Todoist
+                    </button>
+                </div>
+
+                <!-- Dropbox Card -->
+                <div class="service-card" data-service="dropbox">
+                    <div class="service-card-header">
+                        <div class="service-icon">📦</div>
+                        <div class="service-info">
+                            <h4 class="service-name">Dropbox</h4>
+                            <span class="service-category">Connect</span>
+                        </div>
+                        <div style="margin-left: auto;">
+                            <span class="service-status" id="dropbox-status">Not Connected</span>
+                        </div>
+                    </div>
+                    <p class="service-description">
+                        Connect your Dropbox account. Your agent can list files and view file metadata in your cloud storage.
+                    </p>
+                    <div class="service-permissions">
+                        <strong>Permissions:</strong>
+                        <ul>
+                            <li>List files</li>
+                            <li>File metadata</li>
+                        </ul>
+                    </div>
+                    <button class="service-connect-btn" onclick="connectOAuthService('dropbox')">
+                        🚀 Connect Dropbox
+                    </button>
                 </div>
             </div>
 
@@ -1560,11 +1918,572 @@
                     <button class="btn btn-primary" onclick="loadPreviews()">Refresh Previews</button>
                 </div>
             </div>
+            <!-- ========== CHAT BOT TAB ========== -->
+            <div class="tab-content" id="chatbot">
+                <h2>Chat Bot</h2>
+                <div class="chat-layout">
+                    <!-- Left: Conversation List -->
+                    <div class="chat-sidebar">
+                        <div class="chat-sidebar-header">
+                            <button class="btn btn-primary btn-sm" onclick="createNewConversation()" style="width:100%;">+ New Chat</button>
+                        </div>
+                        <div class="chat-agent-selector">
+                            <label style="font-size:11px; color:var(--text-tertiary);">Agent Mode</label>
+                            <select id="chat-agent-mode" onchange="onChatAgentModeChange()">
+                                <option value="direct_llm">Direct LLM</option>
+                                <option value="nautilus">Nautilus</option>
+                            </select>
+                        </div>
+                        <div id="chat-conversation-list" class="chat-conversation-list">
+                            <p style="padding:12px; color:var(--text-tertiary); font-size:13px;">No conversations yet.</p>
+                        </div>
+                    </div>
+                    <!-- Right: Chat Area -->
+                    <div class="chat-main">
+                        <div class="chat-header">
+                            <span id="chat-title" style="font-weight:600;">Select or create a conversation</span>
+                            <span id="chat-model-indicator" class="model-indicator" style="display:none;"></span>
+                        </div>
+                        <div id="chat-messages" class="chat-messages">
+                            <div class="chat-empty-state">
+                                <span style="font-size:48px;">💬</span>
+                                <p>Start a conversation by selecting Direct LLM or connecting to Nautilus</p>
+                            </div>
+                        </div>
+                        <div class="chat-input-bar">
+                            <textarea id="chat-input" placeholder="Type a message..." rows="1" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendChatMessage();}"></textarea>
+                            <button class="btn btn-primary" onclick="sendChatMessage()">Send</button>
+                        </div>
+                    </div>
+                </div>
+                <div id="chatbot-alert" class="alert"></div>
+            </div>
+
+            <!-- ========== WEB BROWSE TAB ========== -->
+            <div class="tab-content" id="web-browse">
+                <h2>Web Research</h2>
+                <div class="card">
+                    <h3>AI-Powered Research</h3>
+                    <p style="color:var(--text-secondary); margin-bottom:16px;">Ask a question and the AI will search the web, fetch relevant pages, and synthesize an answer with source citations.</p>
+                    <textarea id="browse-question" placeholder="What do you want to research? e.g., 'Latest developments in WebAssembly' or 'Best practices for Python async programming'" rows="3" style="width:100%;"></textarea>
+                    <div style="display:flex; gap:12px; margin-top:12px;">
+                        <button class="btn btn-primary" id="browse-research-btn" onclick="startResearch()">Research</button>
+                        <span id="browse-model-indicator" class="model-indicator" style="display:none;"></span>
+                    </div>
+                </div>
+
+                <div id="browse-progress" class="research-progress" style="display:none;">
+                    <div class="progress-step" id="step-searching"><span class="step-icon">🔍</span> Generating search queries...</div>
+                    <div class="progress-step" id="step-fetching"><span class="step-icon">📄</span> Fetching pages...</div>
+                    <div class="progress-step" id="step-analyzing"><span class="step-icon">🧠</span> Analyzing and synthesizing...</div>
+                </div>
+
+                <div id="browse-results" style="display:none;">
+                    <div class="card" style="margin-top:20px;">
+                        <h3>Summary</h3>
+                        <div id="browse-summary" class="browse-summary"></div>
+                    </div>
+                    <div class="card" style="margin-top:12px;">
+                        <h3>Sources</h3>
+                        <div id="browse-sources"></div>
+                    </div>
+                </div>
+
+                <div style="border-top:1px solid var(--border); margin:24px 0;"></div>
+
+                <div class="card">
+                    <h3>Fetch URL</h3>
+                    <p style="color:var(--text-secondary); margin-bottom:12px;">Extract text content from a specific URL.</p>
+                    <div style="display:flex; gap:12px;">
+                        <input type="url" id="browse-fetch-url" placeholder="https://example.com/article" style="flex:1;">
+                        <button class="btn btn-secondary" onclick="fetchSingleUrl()">Fetch</button>
+                    </div>
+                    <div id="browse-fetch-result" style="display:none; margin-top:12px;">
+                        <pre id="browse-fetch-content" style="max-height:300px; overflow-y:auto; padding:12px; background:var(--bg-color); border-radius:8px; font-size:12px; white-space:pre-wrap;"></pre>
+                    </div>
+                </div>
+
+                <div style="margin-top:24px;">
+                    <h3>Research History</h3>
+                    <div id="browse-history"></div>
+                </div>
+                <div id="web-browse-alert" class="alert"></div>
+            </div>
+
+            <!-- ========== UTILITY TAB ========== -->
+            <div class="tab-content" id="utility">
+                <h2>Utility Tools</h2>
+                <p style="color:var(--text-secondary); margin-bottom:20px;">General-purpose AI tools — each with a specialized system prompt. Select a tool, type your request, and get results.</p>
+
+                <div id="utility-tools-grid" class="tools-grid">
+                    <!-- Populated by JS -->
+                </div>
+
+                <div class="card" style="margin-top:20px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                        <h3 id="utility-tool-title">Select a tool above</h3>
+                        <span id="utility-model-indicator" class="model-indicator" style="display:none;"></span>
+                    </div>
+                    <textarea id="utility-input" placeholder="Select a tool to get started..." rows="4" style="width:100%;" disabled></textarea>
+                    <div style="margin-top:12px;">
+                        <button class="btn btn-primary" id="utility-run-btn" onclick="runUtility()" disabled>Run</button>
+                    </div>
+                </div>
+
+                <div id="utility-output-card" class="card" style="margin-top:16px; display:none;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                        <h3>Output</h3>
+                        <button class="btn btn-secondary btn-sm" onclick="copyUtilityOutput()">Copy</button>
+                    </div>
+                    <div id="utility-output" class="utility-output"></div>
+                </div>
+                <div id="utility-alert" class="alert"></div>
+            </div>
+
+            <!-- ========== MODEL CONFIG TAB ========== -->
+            <div class="tab-content" id="model-config">
+                <h2>Model Configuration</h2>
+                <p style="color:var(--text-secondary); margin-bottom:20px;">Configure which LLM model powers each feature. BYO API key — all providers supported.</p>
+
+                <div class="grid-2" id="model-config-cards">
+                    <!-- Chat Bot Config Card -->
+                    <div class="card model-config-card" data-slot="chatbot">
+                        <div style="display:flex; align-items:center; gap:12px; margin-bottom:16px;">
+                            <span style="font-size:24px;">💬</span>
+                            <div>
+                                <h3 style="margin:0;">Chat Bot</h3>
+                                <p id="mc-chatbot-status" class="mc-status" style="margin:0; font-size:12px; color:var(--text-tertiary);">Not configured</p>
+                            </div>
+                        </div>
+                        <button class="btn btn-secondary btn-sm" onclick="openModelConfigForm('chatbot')">Configure</button>
+                    </div>
+
+                    <!-- Web Browsing Config Card -->
+                    <div class="card model-config-card" data-slot="web_browsing">
+                        <div style="display:flex; align-items:center; gap:12px; margin-bottom:16px;">
+                            <span style="font-size:24px;">🌐</span>
+                            <div>
+                                <h3 style="margin:0;">Web Browsing</h3>
+                                <p id="mc-web_browsing-status" class="mc-status" style="margin:0; font-size:12px; color:var(--text-tertiary);">Not configured</p>
+                            </div>
+                        </div>
+                        <button class="btn btn-secondary btn-sm" onclick="openModelConfigForm('web_browsing')">Configure</button>
+                    </div>
+
+                    <!-- Utility Config Card -->
+                    <div class="card model-config-card" data-slot="utility">
+                        <div style="display:flex; align-items:center; gap:12px; margin-bottom:16px;">
+                            <span style="font-size:24px;">🧰</span>
+                            <div>
+                                <h3 style="margin:0;">Utility</h3>
+                                <p id="mc-utility-status" class="mc-status" style="margin:0; font-size:12px; color:var(--text-tertiary);">Not configured</p>
+                            </div>
+                        </div>
+                        <button class="btn btn-secondary btn-sm" onclick="openModelConfigForm('utility')">Configure</button>
+                    </div>
+
+                    <!-- Nautilus Config Card -->
+                    <div class="card model-config-card" data-slot="nautilus">
+                        <div style="display:flex; align-items:center; gap:12px; margin-bottom:16px;">
+                            <span style="font-size:24px;">🐙</span>
+                            <div>
+                                <h3 style="margin:0;">Nautilus AI</h3>
+                                <p id="mc-nautilus-status" class="mc-status" style="margin:0; font-size:12px; color:var(--text-tertiary);">Not configured</p>
+                            </div>
+                        </div>
+                        <button class="btn btn-secondary btn-sm" onclick="openModelConfigForm('nautilus')">Configure</button>
+                    </div>
+                </div>
+
+                <!-- Inline Config Form (shown when Configure is clicked) -->
+                <div id="model-config-form" class="card" style="display:none; margin-top:20px;">
+                    <h3 id="mc-form-title">Configure Model</h3>
+                    <input type="hidden" id="mc-feature-slot">
+
+                    <div class="grid-2" style="margin-top:16px;">
+                        <div>
+                            <label>Provider</label>
+                            <select id="mc-provider" onchange="onMCProviderChange()">
+                                <option value="">Select provider...</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label>Model</label>
+                            <input type="text" id="mc-model" list="mc-model-suggestions" placeholder="Select or type model name">
+                            <datalist id="mc-model-suggestions"></datalist>
+                        </div>
+                    </div>
+
+                    <div id="mc-api-key-group" style="margin-top:12px;">
+                        <label>API Key</label>
+                        <div style="display:flex; gap:8px;">
+                            <input type="password" id="mc-api-key" placeholder="sk-..." style="flex:1;">
+                            <button class="btn btn-secondary btn-sm" onclick="togglePassword('mc-api-key')">Show</button>
+                        </div>
+                    </div>
+
+                    <div id="mc-endpoint-group" style="margin-top:12px; display:none;">
+                        <label>Endpoint URL</label>
+                        <input type="url" id="mc-endpoint-url" placeholder="https://api.example.com/v1/chat/completions">
+                    </div>
+
+                    <div class="grid-2" style="margin-top:12px;">
+                        <div>
+                            <label>Temperature: <span id="mc-temp-value">0.7</span></label>
+                            <input type="range" id="mc-temperature" min="0" max="2" step="0.1" value="0.7" oninput="document.getElementById('mc-temp-value').textContent=this.value">
+                        </div>
+                        <div>
+                            <label>Max Tokens</label>
+                            <input type="number" id="mc-max-tokens" value="1024" min="1" max="128000">
+                        </div>
+                    </div>
+
+                    <div style="display:flex; gap:12px; margin-top:20px;">
+                        <button class="btn btn-primary" onclick="saveModelConfig()">Save</button>
+                        <button class="btn btn-secondary" id="mc-test-btn" onclick="testModelConfig()">Test Connection</button>
+                        <button class="btn btn-secondary" onclick="document.getElementById('model-config-form').style.display='none'">Cancel</button>
+                        <span id="mc-test-result" style="display:flex; align-items:center; font-size:13px;"></span>
+                    </div>
+                </div>
+                <div id="model-config-alert" class="alert"></div>
+            </div>
+
+            <!-- ext-agents tab removed — merged into agents tab above -->
+
+            <!-- Observability Tab -->
+            <div class="tab-content" id="observability">
+                <h2>Agent Observability</h2>
+                <p style="color: var(--text-secondary); margin-bottom: 24px;">Track LLM costs, errors, latency, and agent health in real-time.</p>
+
+                <!-- KPI Cards -->
+                <div id="obs-kpi-cards" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap:16px; margin-bottom:24px;">
+                    <div class="card" style="text-align:center; padding:20px;">
+                        <div style="font-size:24px; font-weight:700; color:var(--primary);" id="obs-kpi-cost">$0.00</div>
+                        <div style="font-size:12px; color:var(--text-secondary); margin-top:4px;">Today's Cost</div>
+                    </div>
+                    <div class="card" style="text-align:center; padding:20px;">
+                        <div style="font-size:24px; font-weight:700; color:var(--accent);" id="obs-kpi-calls">0</div>
+                        <div style="font-size:12px; color:var(--text-secondary); margin-top:4px;">LLM Calls Today</div>
+                    </div>
+                    <div class="card" style="text-align:center; padding:20px;">
+                        <div style="font-size:24px; font-weight:700; color:#ef4444;" id="obs-kpi-errors">0</div>
+                        <div style="font-size:12px; color:var(--text-secondary); margin-top:4px;">Errors Today</div>
+                    </div>
+                    <div class="card" style="text-align:center; padding:20px;">
+                        <div style="font-size:24px; font-weight:700; color:#22c55e;" id="obs-kpi-agents">0</div>
+                        <div style="font-size:12px; color:var(--text-secondary); margin-top:4px;">Active Agents (24h)</div>
+                    </div>
+                    <div class="card" style="text-align:center; padding:20px;">
+                        <div style="font-size:24px; font-weight:700; color:#f59e0b;" id="obs-kpi-alerts">0</div>
+                        <div style="font-size:12px; color:var(--text-secondary); margin-top:4px;">Open Alerts</div>
+                    </div>
+                </div>
+
+                <!-- Sub-navigation -->
+                <div style="display:flex; gap:8px; margin-bottom:20px; flex-wrap:wrap;">
+                    <button class="btn btn-secondary obs-subtab active" data-obs-view="agents-overview" onclick="obsShowView('agents-overview')">Agents Overview</button>
+                    <button class="btn btn-secondary obs-subtab" data-obs-view="events-log" onclick="obsShowView('events-log')">Events Log</button>
+                    <button class="btn btn-secondary obs-subtab" data-obs-view="alerts-view" onclick="obsShowView('alerts-view')">Alerts</button>
+                    <button class="btn btn-secondary obs-subtab" data-obs-view="api-keys-view" onclick="obsShowView('api-keys-view')">API Keys</button>
+                </div>
+
+                <!-- Agents Overview Sub-view -->
+                <div id="obs-view-agents-overview" class="obs-view active">
+                    <div class="card">
+                        <h3>Agent Metrics (last 7 days)</h3>
+                        <div id="obs-agents-table-container" style="overflow-x:auto; margin-top:12px;">
+                            <p style="color:var(--text-secondary);">Loading...</p>
+                        </div>
+                    </div>
+
+                    <!-- Agent Detail Panel (hidden by default) -->
+                    <div id="obs-agent-detail" class="card" style="display:none; margin-top:16px;">
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                            <h3 id="obs-detail-agent-name">Agent Detail</h3>
+                            <button class="btn btn-secondary" onclick="document.getElementById('obs-agent-detail').style.display='none'" style="font-size:12px;">Close</button>
+                        </div>
+                        <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-top:12px;">
+                            <div>
+                                <canvas id="obs-cost-chart" width="400" height="200"></canvas>
+                            </div>
+                            <div>
+                                <canvas id="obs-latency-chart" width="400" height="200"></canvas>
+                            </div>
+                        </div>
+                        <h4 style="margin-top:16px;">Recent Events</h4>
+                        <div id="obs-detail-events" style="overflow-x:auto; margin-top:8px;"></div>
+                    </div>
+                </div>
+
+                <!-- Events Log Sub-view -->
+                <div id="obs-view-events-log" class="obs-view" style="display:none;">
+                    <div class="card">
+                        <div style="display:flex; gap:8px; margin-bottom:12px; flex-wrap:wrap; align-items:center;">
+                            <select id="obs-event-type-filter" onchange="obsLoadEvents()" style="background:var(--card-bg); color:var(--text-primary); border:1px solid var(--border); padding:6px 10px; border-radius:6px;">
+                                <option value="">All Types</option>
+                                <option value="llm_call">LLM Call</option>
+                                <option value="tool_call">Tool Call</option>
+                                <option value="run_started">Run Started</option>
+                                <option value="run_finished">Run Finished</option>
+                                <option value="heartbeat">Heartbeat</option>
+                                <option value="error">Error</option>
+                            </select>
+                            <select id="obs-status-filter" onchange="obsLoadEvents()" style="background:var(--card-bg); color:var(--text-primary); border:1px solid var(--border); padding:6px 10px; border-radius:6px;">
+                                <option value="">All Status</option>
+                                <option value="success">Success</option>
+                                <option value="error">Error</option>
+                                <option value="info">Info</option>
+                            </select>
+                            <button class="btn btn-secondary" onclick="obsLoadEvents()" style="font-size:12px;">Refresh</button>
+                        </div>
+                        <div id="obs-events-table" style="overflow-x:auto;">
+                            <p style="color:var(--text-secondary);">Loading...</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Alerts Sub-view -->
+                <div id="obs-view-alerts-view" class="obs-view" style="display:none;">
+                    <div class="card">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                            <h3>Alert Rules</h3>
+                            <button class="btn btn-primary" onclick="obsShowCreateAlert()" style="font-size:12px;">+ New Rule</button>
+                        </div>
+                        <div id="obs-alert-rules-list"></div>
+
+                        <!-- Create alert form (hidden) -->
+                        <div id="obs-create-alert-form" style="display:none; margin-top:16px; padding:16px; border:1px solid var(--border); border-radius:8px;">
+                            <h4>New Alert Rule</h4>
+                            <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:12px;">
+                                <div>
+                                    <label style="font-size:12px; color:var(--text-secondary);">Name</label>
+                                    <input type="text" id="obs-alert-name" placeholder="e.g. Daily cost limit" style="width:100%; margin-top:4px;">
+                                </div>
+                                <div>
+                                    <label style="font-size:12px; color:var(--text-secondary);">Rule Type</label>
+                                    <select id="obs-alert-type" style="width:100%; margin-top:4px; background:var(--card-bg); color:var(--text-primary); border:1px solid var(--border); padding:8px; border-radius:6px;">
+                                        <option value="cost_per_day">Cost per day > $X</option>
+                                        <option value="error_rate">Error rate > X%</option>
+                                        <option value="no_heartbeat">No heartbeat for X minutes</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label style="font-size:12px; color:var(--text-secondary);">Threshold</label>
+                                    <input type="number" id="obs-alert-threshold" placeholder="e.g. 5.00" step="0.01" style="width:100%; margin-top:4px;">
+                                </div>
+                                <div>
+                                    <label style="font-size:12px; color:var(--text-secondary);">Cooldown (minutes)</label>
+                                    <input type="number" id="obs-alert-cooldown" value="360" style="width:100%; margin-top:4px;">
+                                </div>
+                            </div>
+                            <div style="display:flex; gap:8px; margin-top:12px;">
+                                <button class="btn btn-primary" onclick="obsCreateAlert()">Create</button>
+                                <button class="btn btn-secondary" onclick="document.getElementById('obs-create-alert-form').style.display='none'">Cancel</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card" style="margin-top:16px;">
+                        <h3>Alert History</h3>
+                        <div id="obs-alert-events-list" style="margin-top:8px;"></div>
+                    </div>
+                </div>
+
+                <!-- API Keys Sub-view -->
+                <div id="obs-view-api-keys-view" class="obs-view" style="display:none;">
+                    <div class="card">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                            <h3>Ingestion API Keys</h3>
+                            <button class="btn btn-primary" onclick="obsCreateApiKey()" style="font-size:12px;">+ New Key</button>
+                        </div>
+                        <p style="font-size:13px; color:var(--text-secondary); margin-bottom:12px;">Use these keys to send events from external agents via <code>POST /api/obs/ingest/events</code>.</p>
+                        <div id="obs-api-keys-list"></div>
+                        <div id="obs-new-key-display" style="display:none; margin-top:12px; padding:12px; background:var(--success-bg, #064e3b); border-radius:8px;">
+                            <strong>New key created! Copy it now — it won't be shown again:</strong>
+                            <code id="obs-new-key-value" style="display:block; margin-top:8px; padding:8px; background:rgba(0,0,0,0.3); border-radius:4px; word-break:break-all;"></code>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Governance Tab -->
+            <div class="tab-content" id="governance">
+                <h2>Policy Governance</h2>
+                <p style="color: var(--text-secondary); margin-bottom: 24px;">Review agent policy change requests, manage delegations, and audit the governance trail.</p>
+
+                <!-- Sub-navigation -->
+                <div style="display:flex; gap:8px; margin-bottom:20px; flex-wrap:wrap;">
+                    <button class="btn btn-secondary gov-subtab active" data-gov-view="pending" onclick="govShowView('pending')">Pending Requests</button>
+                    <button class="btn btn-secondary gov-subtab" data-gov-view="delegations" onclick="govShowView('delegations')">Active Delegations</button>
+                    <button class="btn btn-secondary gov-subtab" data-gov-view="audit" onclick="govShowView('audit')">Audit Trail</button>
+                </div>
+
+                <!-- Pending Requests Sub-view -->
+                <div id="gov-view-pending" class="gov-view">
+                    <div class="card">
+                        <h3>Pending Policy Change Requests</h3>
+                        <p style="font-size:13px; color:var(--text-secondary); margin-bottom:12px;">Agents have requested the following policy changes. Approve or deny each request.</p>
+                        <div id="gov-pending-container">
+                            <p style="color:var(--text-secondary);">Loading...</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Active Delegations Sub-view -->
+                <div id="gov-view-delegations" class="gov-view" style="display:none;">
+                    <div class="card">
+                        <h3>Active Delegation Grants</h3>
+                        <p style="font-size:13px; color:var(--text-secondary); margin-bottom:12px;">Time-bound grants allowing agents to self-apply policy changes within approved envelopes.</p>
+                        <div id="gov-delegations-container">
+                            <p style="color:var(--text-secondary);">Loading...</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Audit Trail Sub-view -->
+                <div id="gov-view-audit" class="gov-view" style="display:none;">
+                    <div class="card">
+                        <div style="display:flex; gap:8px; margin-bottom:12px; flex-wrap:wrap; align-items:center;">
+                            <select id="gov-audit-type-filter" onchange="govLoadAudit()" style="background:var(--card-bg); color:var(--text-primary); border:1px solid var(--border); padding:6px 10px; border-radius:6px;">
+                                <option value="">All Events</option>
+                                <option value="request_submitted">Request Submitted</option>
+                                <option value="request_approved">Request Approved</option>
+                                <option value="request_denied">Request Denied</option>
+                                <option value="request_expired">Request Expired</option>
+                                <option value="change_applied">Change Applied</option>
+                                <option value="change_rolled_back">Change Rolled Back</option>
+                                <option value="grant_created">Grant Created</option>
+                                <option value="grant_expired">Grant Expired</option>
+                                <option value="grant_revoked">Grant Revoked</option>
+                                <option value="grant_used">Grant Used</option>
+                                <option value="boundary_violation">Boundary Violation</option>
+                            </select>
+                            <button class="btn btn-secondary" onclick="govLoadAudit()" style="font-size:12px;">Refresh</button>
+                        </div>
+                        <div id="gov-audit-container">
+                            <p style="color:var(--text-secondary);">Loading...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ========== COLLABORATION: TASKS TAB ========== -->
+            <div class="tab-content" id="collab-tasks">
+                <h2>Collaboration Tasks</h2>
+                <p style="color: var(--text-secondary); margin-bottom: 24px;">Manage inter-agent tasks — assign work, track status, and review the full event trail.</p>
+
+                <!-- Controls -->
+                <div style="display: flex; gap: 12px; margin-bottom: 24px; flex-wrap: wrap; align-items: center;">
+                    <button class="btn btn-primary" onclick="showCreateTaskModal()" style="padding: 10px 20px; font-weight: 600;">+ New Task</button>
+                    <select id="collab-task-status-filter" onchange="loadCollabTasks()" style="padding: 8px 12px; background: var(--bg-secondary); color: var(--text-primary); border: 1px solid var(--border); border-radius: 6px;">
+                        <option value="">All Statuses</option>
+                        <option value="queued">Queued</option>
+                        <option value="running">Running</option>
+                        <option value="blocked">Blocked</option>
+                        <option value="completed">Completed</option>
+                        <option value="failed">Failed</option>
+                        <option value="canceled">Canceled</option>
+                    </select>
+                    <select id="collab-task-agent-filter" onchange="loadCollabTasks()" style="padding: 8px 12px; background: var(--bg-secondary); color: var(--text-primary); border: 1px solid var(--border); border-radius: 6px;">
+                        <option value="">All Agents</option>
+                    </select>
+                    <button class="btn btn-secondary" onclick="loadCollabTasks()" style="padding: 8px 16px;">Refresh</button>
+                </div>
+
+                <!-- Task Stats -->
+                <div id="collab-task-stats" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 12px; margin-bottom: 24px;"></div>
+
+                <!-- Task List -->
+                <div id="collab-tasks-list">
+                    <p style="text-align: center; color: var(--text-secondary); padding: 40px;">Loading tasks...</p>
+                </div>
+
+                <!-- Task Detail Modal (hidden) -->
+                <div id="collab-task-detail-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); z-index:1000; overflow-y:auto;">
+                    <div style="max-width:640px; margin:60px auto; background:var(--bg-secondary); border-radius:12px; padding:32px; border:1px solid var(--border);">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+                            <h3 id="collab-task-detail-title" style="margin:0;"></h3>
+                            <button onclick="closeTaskDetailModal()" style="background:none; border:none; color:var(--text-secondary); font-size:20px; cursor:pointer;">✕</button>
+                        </div>
+                        <div id="collab-task-detail-content"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ========== COLLABORATION: TEAM TAB ========== -->
+            <div class="tab-content" id="collab-team">
+                <h2>Team Hierarchy</h2>
+                <p style="color: var(--text-secondary); margin-bottom: 24px;">Define optional roles for your agents and configure team assignment rules.</p>
+
+                <!-- Team Rules Card -->
+                <div class="card" style="margin-bottom: 24px; padding: 20px;">
+                    <h3 style="margin: 0 0 16px 0;">Team Rules</h3>
+                    <div style="display: flex; flex-direction: column; gap: 12px;">
+                        <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
+                            <input type="checkbox" id="collab-rule-enforce" onchange="saveTeamRules()" style="width: 18px; height: 18px;">
+                            <span>Require supervisor for agent-created tasks</span>
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
+                            <input type="checkbox" id="collab-rule-peer" onchange="saveTeamRules()" style="width: 18px; height: 18px;">
+                            <span>Allow peer-to-peer assignment</span>
+                        </label>
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <span>Default supervisor:</span>
+                            <select id="collab-rule-supervisor" onchange="saveTeamRules()" style="padding: 6px 10px; background: var(--bg-secondary); color: var(--text-primary); border: 1px solid var(--border); border-radius: 6px; min-width: 180px;">
+                                <option value="">None</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Assign Role Controls -->
+                <div class="card" style="margin-bottom: 24px; padding: 20px;">
+                    <h3 style="margin: 0 0 16px 0;">Assign Role</h3>
+                    <div style="display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-end;">
+                        <div style="flex: 1; min-width: 180px;">
+                            <label style="display: block; margin-bottom: 4px; font-size: 13px; color: var(--text-secondary);">Agent</label>
+                            <select id="collab-role-agent" style="width: 100%; padding: 8px 12px; background: var(--bg-secondary); color: var(--text-primary); border: 1px solid var(--border); border-radius: 6px;">
+                                <option value="">Select agent</option>
+                            </select>
+                        </div>
+                        <div style="min-width: 140px;">
+                            <label style="display: block; margin-bottom: 4px; font-size: 13px; color: var(--text-secondary);">Role</label>
+                            <select id="collab-role-type" style="width: 100%; padding: 8px 12px; background: var(--bg-secondary); color: var(--text-primary); border: 1px solid var(--border); border-radius: 6px;">
+                                <option value="supervisor">Supervisor</option>
+                                <option value="worker">Worker</option>
+                                <option value="specialist">Specialist</option>
+                            </select>
+                        </div>
+                        <button class="btn btn-primary" onclick="assignAgentRole()" style="padding: 8px 20px;">Assign</button>
+                    </div>
+                </div>
+
+                <!-- Team Summary -->
+                <div id="collab-team-summary">
+                    <p style="text-align: center; color: var(--text-secondary); padding: 40px;">Loading team...</p>
+                </div>
+            </div>
+
                 </div> <!-- end content-wrapper -->
             </main> <!-- end main-content -->
         </div> <!-- end app-layout -->
     </div> <!-- end container -->
 
+    <!-- Buy Credits Modal -->
+    <div id="buy-credits-modal" class="modal" style="display:none;">
+        <div class="modal-content" style="max-width: 600px;">
+            <span class="modal-close" onclick="closeModal('buy-credits-modal')">&times;</span>
+            <h2 style="margin-bottom: 4px;">Buy Credits</h2>
+            <p style="margin-bottom: 20px; color: var(--text-secondary);">Credits are used for Moltbook posts and other premium actions.</p>
+            <div id="credit-packages" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 16px;"></div>
+            <div id="payment-processing" style="display: none; flex-direction: column; align-items: center; gap: 12px; padding: 32px 0;">
+                <div class="spinner"></div>
+                <p style="color: var(--text-secondary); font-size: 14px;">Redirecting to checkout...</p>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/js/nautilus-client.js"></script>
     <script src="/static/js/dashboard-main.js"></script>
 </body>
 </html>

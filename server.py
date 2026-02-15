@@ -13,10 +13,19 @@ from datetime import datetime
 import secrets
 
 app = Flask(__name__)
-CORS(app, supports_credentials=True)
+
+# CORS: restrict to allowed origins in production
+_allowed_origins = os.environ.get('CORS_ORIGINS', '*').split(',')
+CORS(app, supports_credentials=True, origins=[o.strip() for o in _allowed_origins])
 
 # Secret key for sessions (generate a secure one for production)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', secrets.token_hex(32))
+
+# Session cookie security
+app.config['SESSION_COOKIE_HTTPONLY'] = True
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+if os.environ.get('FLASK_ENV') != 'development':
+    app.config['SESSION_COOKIE_SECURE'] = True
 
 # Database configuration
 database_url = os.environ.get('DATABASE_URL', f'sqlite:///{Path(__file__).parent}/openclaw.db')
@@ -59,66 +68,72 @@ else:
     }
 
 # Import and initialize database
-from models import db, User, MagicLink, CreditTransaction, PostHistory, CreditPackage, ConfigFile, SubscriptionPlan, Agent, MoltbookFeedCache, UserUpvote, AnalyticsSnapshot, PostAnalytics, Superpower, AgentAction
+from models import db, User, MagicLink, CreditTransaction, PostHistory, CreditPackage, ConfigFile, SubscriptionPlan, Agent, MoltbookFeedCache, UserUpvote, AnalyticsSnapshot, PostAnalytics, Superpower, AgentAction, UserModelConfig, ChatConversation, ChatMessage, WebBrowsingResult, ObsApiKey, ObsEvent, ObsRun, ObsAgentDailyMetrics, ObsAlertRule, ObsAlertEvent, ObsLlmPricing, ObsAgentHealthDaily, CollaborationTask, TaskEvent, AgentMessage, AgentRole, TeamRule, MemoryEmbedding
 db.init_app(app)
 
 # Initialize rate limiter
 from rate_limiter import init_limiter
 limiter = init_limiter(app)
 
-# Register authentication routes
-from auth_routes import register_auth_routes
+# Register all route modules
+from routes import (
+    register_auth_routes, register_stripe_routes,
+    moltbook_bp, analytics_bp, obs_bp,
+    register_agent_routes, register_setup_routes,
+    register_channels_routes, register_llm_providers_routes,
+    register_oauth_routes, register_gmail_routes,
+    register_calendar_routes, register_drive_routes,
+    register_notion_routes, register_binance_routes,
+    register_binance_actions_routes, register_agent_actions_routes,
+    register_model_config_routes,
+    register_chatbot_routes, register_web_browsing_routes,
+    register_utility_routes,
+    register_slack_routes, register_github_routes,
+    register_discord_routes, register_telegram_routes,
+    register_spotify_routes, register_todoist_routes,
+    register_dropbox_routes,
+    register_governance_routes,
+    register_collaboration_tasks_routes,
+    register_collaboration_messages_routes,
+    register_collaboration_team_routes,
+    register_memory_routes,
+    register_blueprint_routes,
+)
+
 register_auth_routes(app)
-
-# Register Stripe/payment routes
-from stripe_routes import register_stripe_routes
 register_stripe_routes(app)
-
-# Register Phase 1 routes (Feed + Analytics)
-from moltbook_routes import moltbook_bp
-from analytics_routes import analytics_bp
 app.register_blueprint(moltbook_bp)
 app.register_blueprint(analytics_bp)
-
-# Register agent management routes
-from agent_routes import register_agent_routes
+app.register_blueprint(obs_bp)
 register_agent_routes(app)
-
-# Register setup wizard routes
-from setup_routes import register_setup_routes
 register_setup_routes(app)
-
-# Register chat channels routes
-from channels_routes import register_channels_routes
 register_channels_routes(app)
-
-# Register LLM providers routes
-from llm_providers_routes import register_llm_providers_routes
 register_llm_providers_routes(app)
-
-# Register OAuth routes for superpowers
-from oauth_routes import register_oauth_routes
 register_oauth_routes(app)
-
-# Register Gmail routes
-from gmail_routes import register_gmail_routes
 register_gmail_routes(app)
-
-# Register Calendar routes
-from calendar_routes import register_calendar_routes
 register_calendar_routes(app)
-
-# Register Drive routes
-from drive_routes import register_drive_routes
 register_drive_routes(app)
-
-# Register Notion routes
-from notion_routes import register_notion_routes
 register_notion_routes(app)
-
-# Register AI Agent Actions routes
-from agent_actions_routes import register_agent_actions_routes
+register_binance_routes(app)
+register_binance_actions_routes(app)
 register_agent_actions_routes(app)
+register_model_config_routes(app)
+register_chatbot_routes(app)
+register_web_browsing_routes(app)
+register_utility_routes(app)
+register_slack_routes(app)
+register_github_routes(app)
+register_discord_routes(app)
+register_telegram_routes(app)
+register_spotify_routes(app)
+register_todoist_routes(app)
+register_dropbox_routes(app)
+register_governance_routes(app)
+register_collaboration_tasks_routes(app)
+register_collaboration_messages_routes(app)
+register_collaboration_team_routes(app)
+register_memory_routes(app)
+register_blueprint_routes(app)
 
 # LLM API proxy routes (to avoid CORS issues)
 @app.route('/api/generate-post', methods=['POST'])
@@ -180,7 +195,7 @@ Remember: Be creative and authentic. This is YOUR voice, not just following inst
 
     except Exception as e:
         print(f"❌ Error generating post: {e}")
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'error': 'An internal error occurred'}), 500
 
 def call_anthropic_api(prompt, llm_config):
     """Call Anthropic API"""
@@ -293,8 +308,10 @@ def get_config(filename):
         if filename not in allowed_files:
             return jsonify({'error': 'File not allowed'}), 403
 
-        # Get user_id from session (or use default user for backward compatibility)
-        user_id = session.get('user_id', 1)  # Default to user 1 if not logged in
+        # Require authentication
+        user_id = session.get('user_id')
+        if not user_id:
+            return jsonify({'error': 'Authentication required'}), 401
 
         # Try to get from database first
         config = ConfigFile.query.filter_by(user_id=user_id, filename=filename).first()
@@ -314,7 +331,7 @@ def get_config(filename):
 
     except Exception as e:
         print(f"❌ Error in get_config: {e}")
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'error': 'An internal error occurred'}), 500
 
 @app.route('/api/config/<filename>', methods=['POST'])
 def save_config(filename):
@@ -329,18 +346,10 @@ def save_config(filename):
         data = request.get_json()
         content = data.get('content', '')
 
-        # Get user_id from session (or use default user)
+        # Require authentication
         user_id = session.get('user_id')
-
         if not user_id:
-            # If not logged in, create a default user or return error
-            # For now, create/use default user with ID 1
-            user = User.query.get(1)
-            if not user:
-                user = User(id=1, email='default@openclaw.local', credit_balance=0)
-                db.session.add(user)
-                db.session.commit()
-            user_id = 1
+            return jsonify({'error': 'Authentication required'}), 401
 
         # Find existing config or create new one
         config = ConfigFile.query.filter_by(user_id=user_id, filename=filename).first()
@@ -360,7 +369,7 @@ def save_config(filename):
     except Exception as e:
         print(f"❌ Error in save_config: {e}")
         db.session.rollback()
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'error': 'An internal error occurred'}), 500
 
 @app.route('/api/status', methods=['GET'])
 def get_status():
@@ -392,7 +401,8 @@ def get_status():
         return jsonify(status)
 
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        print(f"❌ Error in get_status: {e}")
+        return jsonify({'error': 'An internal error occurred'}), 500
 
 @app.route('/api/test-connection', methods=['POST'])
 def test_connection():
@@ -615,7 +625,8 @@ Next Steps:
             'message': 'Moltbook API is taking too long to respond (>30s). Try again in a moment.'
         }), 504
     except Exception as e:
-        return jsonify({'success': False, 'message': f'Error: {str(e)}'}), 500
+        print(f"❌ Error in moltbook claim: {e}")
+        return jsonify({'success': False, 'message': 'An internal error occurred'}), 500
 
 @app.route('/api/moltbook/import', methods=['POST'])
 def moltbook_import():
@@ -714,7 +725,8 @@ Never share it with third parties, "verification" services, or other domains.
             'message': 'Moltbook API is taking too long to respond (>30s). Try again in a moment.'
         }), 504
     except Exception as e:
-        return jsonify({'success': False, 'message': f'Error: {str(e)}'}), 500
+        print(f"❌ Error in moltbook import: {e}")
+        return jsonify({'success': False, 'message': 'An internal error occurred'}), 500
 
 @app.route('/api/moltbook/status', methods=['GET'])
 def moltbook_status():
@@ -757,7 +769,8 @@ def moltbook_status():
             }), response.status_code
 
     except Exception as e:
-        return jsonify({'success': False, 'message': f'Error: {str(e)}'}), 500
+        print(f"❌ Error in moltbook status: {e}")
+        return jsonify({'success': False, 'message': 'An internal error occurred'}), 500
 
 @app.route('/api/moltbook/profile', methods=['GET'])
 def moltbook_profile():
@@ -787,7 +800,8 @@ def moltbook_profile():
             }), response.status_code
 
     except Exception as e:
-        return jsonify({'success': False, 'message': f'Error: {str(e)}'}), 500
+        print(f"❌ Error in moltbook profile: {e}")
+        return jsonify({'success': False, 'message': 'An internal error occurred'}), 500
 
 @app.route('/api/moltbook/post', methods=['POST'])
 def moltbook_post():
@@ -825,7 +839,8 @@ def moltbook_post():
             }), response.status_code
 
     except Exception as e:
-        return jsonify({'success': False, 'message': f'Error: {str(e)}'}), 500
+        print(f"❌ Error in moltbook post: {e}")
+        return jsonify({'success': False, 'message': 'An internal error occurred'}), 500
 
 @app.route('/api/admin/init-db', methods=['POST'])
 def initialize_database():
@@ -838,7 +853,7 @@ def initialize_database():
         admin_password = data.get('password', '')
 
         # Simple password protection (change this in production!)
-        if admin_password != os.environ.get('ADMIN_PASSWORD', 'openclaw-init-2026'):
+        if not os.environ.get('ADMIN_PASSWORD') or admin_password != os.environ['ADMIN_PASSWORD']:
             return jsonify({'error': 'Unauthorized'}), 401
 
         # Create all tables
@@ -881,39 +896,15 @@ def initialize_database():
         if SubscriptionPlan.query.first() is None:
             plans = [
                 SubscriptionPlan(
-                    tier='starter',
-                    name='Starter Plan',
-                    price_monthly_cents=900,  # $9/month
-                    unlimited_posts=False,
-                    max_agents=3,
-                    scheduled_posting=True,
-                    analytics=True,
-                    api_access=False,
-                    team_members=1,
-                    priority_support=False
-                ),
-                SubscriptionPlan(
                     tier='pro',
                     name='Pro Plan',
-                    price_monthly_cents=2900,  # $29/month
-                    unlimited_posts=True,  # Note: Moltbook has 30-min limit for all users
-                    max_agents=5,
-                    scheduled_posting=True,
-                    analytics=True,
-                    api_access=True,
-                    team_members=1,
-                    priority_support=True
-                ),
-                SubscriptionPlan(
-                    tier='team',
-                    name='Team Plan',
-                    price_monthly_cents=4900,  # $49/month
+                    price_monthly_cents=1500,  # $15/month (beta pricing)
                     unlimited_posts=True,
-                    max_agents=10,  # 10 agents for $49
+                    max_agents=999,
                     scheduled_posting=True,
                     analytics=True,
                     api_access=True,
-                    team_members=3,  # 3 team members
+                    team_members=3,
                     priority_support=True
                 )
             ]
@@ -922,7 +913,7 @@ def initialize_database():
                 db.session.add(plan)
 
             db.session.commit()
-            messages.append('✅ Seeded subscription plans')
+            messages.append('✅ Seeded subscription plans (2-tier model: Free + Pro)')
         else:
             messages.append('ℹ️  Subscription plans already exist')
 
@@ -934,7 +925,8 @@ def initialize_database():
 
     except Exception as e:
         db.session.rollback()
-        return jsonify({'error': str(e)}), 500
+        print(f"❌ Error in init-db: {e}")
+        return jsonify({'error': 'An internal error occurred'}), 500
 
 @app.route('/api/admin/migrate-subscription-columns', methods=['POST'])
 def migrate_subscription_columns():
@@ -946,7 +938,7 @@ def migrate_subscription_columns():
         data = request.get_json() or {}
         admin_password = data.get('password', '')
 
-        if admin_password != os.environ.get('ADMIN_PASSWORD', 'openclaw-init-2026'):
+        if not os.environ.get('ADMIN_PASSWORD') or admin_password != os.environ['ADMIN_PASSWORD']:
             return jsonify({'error': 'Unauthorized'}), 401
 
         # Run raw SQL to add columns if they don't exist
@@ -999,46 +991,123 @@ def migrate_subscription_columns():
 
     except Exception as e:
         db.session.rollback()
-        return jsonify({'error': str(e)}), 500
+        print(f"❌ Error in migrate-subscription-columns: {e}")
+        return jsonify({'error': 'An internal error occurred'}), 500
 
 @app.route('/api/admin/update-pricing', methods=['POST'])
 def update_pricing():
     """
-    Update subscription plan pricing in database
-    Use this when changing pricing tiers
+    Update Pro plan pricing in database
     """
     try:
         data = request.get_json() or {}
         admin_password = data.get('password', '')
 
-        if admin_password != os.environ.get('ADMIN_PASSWORD', 'openclaw-init-2026'):
+        if not os.environ.get('ADMIN_PASSWORD') or admin_password != os.environ['ADMIN_PASSWORD']:
             return jsonify({'error': 'Unauthorized'}), 401
 
-        # Update Team plan pricing from $79 to $49
-        team_plan = SubscriptionPlan.query.filter_by(tier='team').first()
-        if team_plan:
-            team_plan.price_monthly_cents = 4900  # $49/month
-            team_plan.max_agents = 10
-            team_plan.team_members = 3
+        pro_plan = SubscriptionPlan.query.filter_by(tier='pro').first()
+        if pro_plan:
+            new_price = data.get('price_cents', 1500)
+            old_price = pro_plan.price_monthly_cents
+            pro_plan.price_monthly_cents = new_price
+            pro_plan.max_agents = 999
+            pro_plan.team_members = 3
+            pro_plan.unlimited_posts = True
+            pro_plan.scheduled_posting = True
+            pro_plan.analytics = True
+            pro_plan.api_access = True
+            pro_plan.priority_support = True
             db.session.commit()
 
             return jsonify({
                 'success': True,
-                'message': 'Pricing updated successfully',
+                'message': 'Pro plan pricing updated',
                 'updated': {
-                    'tier': 'team',
-                    'old_price': '$79/month',
-                    'new_price': '$49/month',
-                    'max_agents': 10,
+                    'tier': 'pro',
+                    'old_price': f'${old_price/100:.2f}/month',
+                    'new_price': f'${new_price/100:.2f}/month',
+                    'max_agents': 999,
                     'team_members': 3
                 }
             })
         else:
-            return jsonify({'error': 'Team plan not found'}), 404
+            return jsonify({'error': 'Pro plan not found'}), 404
 
     except Exception as e:
         db.session.rollback()
-        return jsonify({'error': str(e)}), 500
+        print(f"❌ Error in update-pricing: {e}")
+        return jsonify({'error': 'An internal error occurred'}), 500
+
+@app.route('/api/admin/migrate-to-two-tier', methods=['POST'])
+def migrate_to_two_tier():
+    """
+    Migration endpoint: collapse 4-tier model (free/starter/pro/team) to 2-tier (free/pro).
+    - Deactivates starter and team plans
+    - Updates pro plan to $15/month (beta pricing)
+    - Migrates users on starter/team to pro
+    """
+    try:
+        data = request.get_json() or {}
+        admin_password = data.get('password', '')
+
+        if not os.environ.get('ADMIN_PASSWORD') or admin_password != os.environ['ADMIN_PASSWORD']:
+            return jsonify({'error': 'Unauthorized'}), 401
+
+        results = []
+
+        # Deactivate starter and team plans
+        for tier in ('starter', 'team'):
+            plan = SubscriptionPlan.query.filter_by(tier=tier).first()
+            if plan:
+                plan.is_active = False
+                results.append(f'Deactivated {tier} plan')
+
+        # Update pro plan
+        pro_plan = SubscriptionPlan.query.filter_by(tier='pro').first()
+        if pro_plan:
+            pro_plan.price_monthly_cents = 1500
+            pro_plan.max_agents = 999
+            pro_plan.team_members = 3
+            pro_plan.unlimited_posts = True
+            pro_plan.is_active = True
+            results.append('Updated pro plan to $15/month (beta pricing)')
+        else:
+            # Create pro plan if it doesn't exist
+            pro_plan = SubscriptionPlan(
+                tier='pro',
+                name='Pro Plan',
+                price_monthly_cents=1500,
+                unlimited_posts=True,
+                max_agents=999,
+                scheduled_posting=True,
+                analytics=True,
+                api_access=True,
+                team_members=3,
+                priority_support=True,
+                is_active=True
+            )
+            db.session.add(pro_plan)
+            results.append('Created pro plan at $15/month (beta pricing)')
+
+        # Migrate users on starter/team to pro
+        migrated = User.query.filter(
+            User.subscription_tier.in_(['starter', 'team'])
+        ).update({User.subscription_tier: 'pro'}, synchronize_session='fetch')
+        results.append(f'Migrated {migrated} users from starter/team to pro')
+
+        db.session.commit()
+
+        return jsonify({
+            'success': True,
+            'message': 'Migration to 2-tier model complete',
+            'details': results
+        })
+
+    except Exception as e:
+        db.session.rollback()
+        print(f"❌ Error in migrate-to-two-tier: {e}")
+        return jsonify({'error': 'An internal error occurred'}), 500
 
 @app.route('/api/admin/update-stripe-ids', methods=['POST'])
 def update_stripe_ids():
@@ -1050,19 +1119,10 @@ def update_stripe_ids():
         data = request.get_json() or {}
         admin_password = data.get('password', '')
 
-        if admin_password != os.environ.get('ADMIN_PASSWORD', 'openclaw-init-2026'):
+        if not os.environ.get('ADMIN_PASSWORD') or admin_password != os.environ['ADMIN_PASSWORD']:
             return jsonify({'error': 'Unauthorized'}), 401
 
         updates = []
-
-        # Update Starter plan
-        if 'starter_price_id' in data:
-            starter = SubscriptionPlan.query.filter_by(tier='starter').first()
-            if starter:
-                starter.stripe_price_id = data['starter_price_id']
-                if 'starter_product_id' in data:
-                    starter.stripe_product_id = data['starter_product_id']
-                updates.append('Starter')
 
         # Update Pro plan
         if 'pro_price_id' in data:
@@ -1072,15 +1132,6 @@ def update_stripe_ids():
                 if 'pro_product_id' in data:
                     pro.stripe_product_id = data['pro_product_id']
                 updates.append('Pro')
-
-        # Update Team plan
-        if 'team_price_id' in data:
-            team = SubscriptionPlan.query.filter_by(tier='team').first()
-            if team:
-                team.stripe_price_id = data['team_price_id']
-                if 'team_product_id' in data:
-                    team.stripe_product_id = data['team_product_id']
-                updates.append('Team')
 
         if updates:
             db.session.commit()
@@ -1094,7 +1145,8 @@ def update_stripe_ids():
 
     except Exception as e:
         db.session.rollback()
-        return jsonify({'error': str(e)}), 500
+        print(f"❌ Error in update-stripe-ids: {e}")
+        return jsonify({'error': 'An internal error occurred'}), 500
 
 @app.route('/api/admin/run-migrations', methods=['POST'])
 def run_migrations():
@@ -1106,7 +1158,7 @@ def run_migrations():
         data = request.get_json() or {}
         admin_password = data.get('password', '')
 
-        if admin_password != os.environ.get('ADMIN_PASSWORD', 'openclaw-init-2026'):
+        if not os.environ.get('ADMIN_PASSWORD') or admin_password != os.environ['ADMIN_PASSWORD']:
             return jsonify({'error': 'Unauthorized'}), 401
 
         migrations_run = []
@@ -1160,7 +1212,7 @@ def run_migrations():
     except Exception as e:
         db.session.rollback()
         print(f"❌ Migration error: {e}")
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'error': 'An internal error occurred'}), 500
 
 if __name__ == '__main__':
     print("=" * 60)
